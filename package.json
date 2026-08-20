@@ -1,0 +1,17 @@
+{
+  "name": "atlas-app",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Local-first app for an Atlas Markdown vault.",
+  "scripts": {
+    "serve": "node server.js",
+    "dev:server": "node dev-server.js",
+    "check:web": "node --check public/atlas-api.js && node --check public/app.js && node --check server.js && node --check dev-server.js",
+    "tauri": "tauri",
+    "dev": "tauri dev",
+    "build": "tauri build"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.0.0"
+  }
+}
