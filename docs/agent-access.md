@@ -1,23 +1,35 @@
-# Agent Access Plan
+# Hybrid Agent Access
 
-Atlas App is moving toward secure agent access without exposing the whole vault.
+Atlas App supports Codex and Agent Zero as separate processors without exposing the whole vault or sharing credentials between agents.
 
-The near-term pattern is:
+## Current Flow
 
 ```text
-Agent -> Atlas local API -> scoped operation -> Markdown change -> Change Log
+Capture -> Atlas lease -> Codex local handoff
+                      -> Agent Zero A2A proposal -> Review
 ```
 
 ## Principles
 
-- Agent access is off by default.
-- The user enables it in Atlas settings.
+- Codex is enabled by default and uses its own local ChatGPT sign-in.
+- Agent Zero access is opt-in and uses its own A2A token.
 - Access is local-first and scoped.
-- Meaningful writes remain review-gated unless Atlas rules explicitly allow direct filing.
+- Each Capture path can belong to only one active processing lease.
+- Agent Zero receives only the content included in its assigned job.
+- Agent Zero output becomes an `under-review` note rather than a direct vault write.
+- Meaningful writes remain review-gated unless Atlas rules explicitly permit filing.
 - Every write is logged in `00-System/Change-Log.md`.
 - Secrets are never copied into review notes or final notes.
 
-## Candidate Scopes
+Codex leases expire after one hour if the local handoff is not completed. Agent Zero jobs complete when Atlas receives and saves the A2A response; failures release the Capture paths for a later attempt.
+
+## Settings
+
+The processing mode can be `Codex`, `Agent Zero`, or `Hybrid`. Hybrid mode presents both processors at dispatch time; it does not send the same Capture to both.
+
+Agent Zero settings contain an instance URL, optional project, and A2A token. The token is written to local secret state and is not stored in the vault, returned by the settings API, or committed to Git.
+
+## Future Inbound Scopes
 
 ```text
 capture:create
@@ -31,21 +43,21 @@ library:read
 file:dropbox
 ```
 
-Start with the smallest useful scopes:
+An inbound MCP or local API bridge should begin with the smallest useful scopes:
 
 1. Create Capture item
 2. Read Review Queue
 3. Propose Review note
 4. Log completed action
 
-## Agent Zero Notes
+## Agent Zero A2A
 
-Agent Zero currently runs through a Docker-based setup by default, and its docs describe optional A0 CLI host access for local files, host terminal execution, and browser workflows:
+Agent Zero's A2A server accepts a scoped message at its project-aware connection URL. Atlas uses that outbound interface so Agent Zero does not need a writable mount of the personal vault:
 
+- https://www.agent-zero.ai/p/docs/mcp-a2a/
 - https://www.agent-zero.ai/p/docs/installation/
-- https://www.agent-zero.ai/p/docs/
 
-That makes a scoped Atlas local API preferable to mounting an entire personal vault into the Agent Zero container. For a future music workflow, an agent should receive a watched drop folder or a single uploaded artifact plus specific scopes, not unrestricted vault access.
+For a future music workflow, an agent should receive a watched intake artifact plus specific project metadata, not unrestricted vault access.
 
 ## Example Music Workflow
 
@@ -60,3 +72,7 @@ Drop MP3 into allowed intake folder
 ```
 
 External actions such as publishing, distribution uploads, account changes, spending, or messaging should require explicit approval.
+
+## Custom Objects
+
+Object Studio records the object's name, tracking intent, processing behavior, ultimate goal, and preferred setup processor as a Capture request. The selected agent must prepare a Review proposal before it changes templates, registry entries, or durable processing rules.

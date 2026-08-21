@@ -40,6 +40,16 @@ For stale captures:
 
 Fresh captures still use Review unless the change is low-risk or explicitly requested.
 
+## Agent Processing Leases
+
+Atlas App may lease Capture items to Codex or Agent Zero for one hour. Do not process a path assigned to another active job. An expired or failed lease may be claimed again.
+
+Agent Zero responses enter Review as proposals. They do not authorize direct filing, cleanup, external actions, or durable rule changes.
+
+## Custom Objects
+
+Custom-object requests enter Capture. Draft the complete metadata, destination, template, processing behavior, dashboard impact, and relationships, then create a Review note before changing `00-System/Object-Types.md` or another durable system rule.
+
 ## Review
 
 Review notes live in:

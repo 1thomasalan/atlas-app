@@ -4,6 +4,8 @@ Atlas App is a local-first interface for an Atlas Markdown vault.
 
 Atlas keeps personal data in a normal folder of Markdown files, usually opened with Obsidian. Atlas App is the optional app layer that reads and writes that vault through narrow, explicit actions: dashboard review, daily focus, tasks, routines, notes, and capture requests.
 
+Atlas App also supports hybrid processing. Codex can handle local, subscription-authenticated work while Agent Zero prepares scoped, review-only proposals through its A2A interface. Atlas leases each Capture item to one processor at a time so the two agents do not race over the same source.
+
 ## Data Boundary
 
 This repository is intended to be public. It should contain app code, templates, docs, and example scaffolding only.
@@ -71,15 +73,16 @@ Use it to create a fresh Atlas-compatible Obsidian vault, then point Atlas App a
 
 ## Agent Access Direction
 
-Atlas App is being designed toward opt-in agent access through narrow local operations, not blanket filesystem access. The future agent bridge should support scoped permissions such as:
+Agent access is opt-in and uses narrow operations instead of blanket filesystem access. The current hybrid foundation supports:
 
-- create a capture
-- read pending work
-- propose a processing result
-- write a reviewed change
-- log an action
+- Codex handoffs that use the locally signed-in ChatGPT subscription
+- Agent Zero A2A dispatch with its token stored outside the vault and outside Git
+- one-hour Capture leases that prevent duplicate agent claims
+- Agent Zero results saved as `under-review` proposals with Quick Approval
+- external actions and durable rule changes kept behind approval gates
+- object-type toggles and custom-object setup requests
 
-See `docs/agent-access.md` for the working architecture.
+Atlas never gives Agent Zero the Codex session or a writable vault mount. See `docs/agent-access.md` for the working architecture and remaining MCP/API direction.
 
 ## Safety Checks
 

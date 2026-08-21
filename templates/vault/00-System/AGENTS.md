@@ -13,8 +13,9 @@ Before doing Atlas work, read these files in order:
 7. `00-System/Wiki-Maintenance.md`
 8. `00-System/Interaction-Rules.md`
 9. `00-System/Privacy-Rules.md`
-10. `00-System/Agent-Handbook.md`
-11. `00-System/Change-Log.md`
+10. `00-System/Object-Types.md`
+11. `00-System/Agent-Handbook.md`
+12. `00-System/Change-Log.md`
 
 ## Core Rules
 
@@ -26,6 +27,8 @@ Before doing Atlas work, read these files in order:
 6. Do not treat `under-review` files as final knowledge.
 7. Follow `00-System/Privacy-Rules.md`.
 8. Log every file or folder change in `00-System/Change-Log.md`.
+9. Respect active Atlas processing-job leases; do not process a Capture item claimed by another agent.
+10. Put custom-object and durable processing-rule changes into Review before applying them.
 
 ## Quick Approval
 

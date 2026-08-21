@@ -35,15 +35,21 @@ Neither path should be committed.
 
 ## Agent Access
 
-Agents should not receive blanket access to the private vault. Prefer an opt-in local bridge with:
+Agents should not receive blanket access to the private vault. Atlas hybrid processing uses:
 
 - disabled by default
-- local-only bind address
-- token or OS-mediated authorization
-- scope-based permissions
+- separate Codex and Agent Zero authentication
+- a permission-restricted local Agent Zero secret file
+- one processor lease per Capture item
+- explicit selection before private Capture content is sent to Agent Zero
 - explicit action logs
-- review gates for meaningful writes
+- Review notes for Agent Zero results
+- approval gates for external actions and durable rule changes
+
+The Agent Zero token grants access to that Agent Zero instance. Use a local instance when possible. Atlas permits unencrypted HTTP only for loopback addresses and requires HTTPS for remote instance URLs.
+
+Atlas does not read or copy Codex's cached ChatGPT authentication. Codex remains responsible for its own local sign-in and permission profile.
 
 ## Secrets
 
-Atlas Markdown should not be a secret store. Store secrets in a password manager or OS-backed secret storage. Markdown can reference that a credential exists without copying the value.
+Atlas Markdown should not be a secret store. Store general credentials in a password manager or OS-backed secret storage. Browser mode stores the Agent Zero A2A token in ignored local state with mode `0600` when the filesystem supports it; the token is never returned to the browser after saving. Markdown can reference that a credential exists without copying the value.

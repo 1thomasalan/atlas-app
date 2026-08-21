@@ -29,6 +29,16 @@ Required top-level folders:
 
 The service only binds to `127.0.0.1` by default.
 
+Local operational state lives outside the vault:
+
+```text
+.atlas-local/settings.json    non-secret browser preferences
+.atlas-local/secrets.json     Agent Zero A2A token, mode 0600 when supported
+.atlas-local/agent-jobs.json  short processing leases and job outcomes
+```
+
+These files are ignored by Git. The Tauri shell stores the same state in the OS app config directory.
+
 ## 3. Tauri Shell
 
 `src-tauri/` provides a desktop shell. It stores the selected vault path in the app config directory and uses Tauri commands for native file access.
@@ -36,3 +46,17 @@ The service only binds to `127.0.0.1` by default.
 ## Design Rule
 
 Prefer narrow operations over generic file writes. A button such as `Complete task` is safer than an endpoint that writes arbitrary text to arbitrary paths.
+
+## Hybrid Processing
+
+```text
+Capture item
+-> Atlas lease
+-> Codex local handoff OR Agent Zero A2A dispatch
+-> Review or permitted filing
+-> lease completion or expiry
+```
+
+Codex authenticates independently through its local ChatGPT sign-in. Agent Zero authenticates independently through its A2A token. Atlas never converts, copies, or brokers one agent's credential to the other.
+
+Agent Zero receives only the Capture content assigned to the job. Its response becomes an Atlas Review note; it does not receive a vault write path from this workflow.

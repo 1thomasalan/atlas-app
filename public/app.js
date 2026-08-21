@@ -1,4 +1,15 @@
 const TASK_TABS = new Set(["today", "thisWeek", "waiting", "routines", "completed"]);
+const DEFAULT_OBJECT_TYPES = {
+  dailyNotes: true,
+  people: true,
+  places: true,
+  tasks: true,
+  projects: true,
+  organizations: true,
+  interactions: true,
+  routines: true,
+  sources: true,
+};
 
 function readPreference(key, fallback = "") {
   try {
@@ -44,6 +55,15 @@ const state = {
     runtime: "browser",
     vaultPath: "",
     theme: readPreference("atlas-theme", "light"),
+    processingMode: "codex",
+    codexEnabled: true,
+    agentZeroEnabled: false,
+    agentZeroBaseUrl: "http://127.0.0.1:50080",
+    agentZeroProject: "Atlas",
+    agentZeroTokenConfigured: false,
+    requireExternalApproval: true,
+    requireRuleApproval: true,
+    objectTypes: { ...DEFAULT_OBJECT_TYPES },
   },
 };
 
@@ -135,6 +155,77 @@ function renderSettings() {
   $("#settings-vault-path").value = state.settings.vaultPath || "";
   $("#vault-path-input").value = state.settings.vaultPath || "";
   $("#theme-select").value = state.settings.theme || "light";
+  const objectTypes = { ...DEFAULT_OBJECT_TYPES, ...(state.settings.objectTypes || {}) };
+  $$('[data-object-setting]').forEach((input) => {
+    input.checked = objectTypes[input.dataset.objectSetting] !== false;
+  });
+  $$('input[name="processingMode"]').forEach((input) => {
+    input.checked = input.value === (state.settings.processingMode || "codex");
+  });
+  $("#codex-enabled").checked = state.settings.codexEnabled !== false;
+  $("#agent-zero-enabled").checked = state.settings.agentZeroEnabled === true;
+  $("#agent-zero-base-url").value =
+    state.settings.agentZeroBaseUrl || "http://127.0.0.1:50080";
+  $("#agent-zero-project").value = state.settings.agentZeroProject || "Atlas";
+  $("#agent-zero-token").value = "";
+  $("#clear-agent-zero-token").checked = false;
+  $("#clear-agent-zero-token-row").hidden = !state.settings.agentZeroTokenConfigured;
+  $("#settings-agent-zero-status").textContent = state.settings.agentZeroTokenConfigured
+    ? "A2A token saved locally"
+    : "A2A token required";
+  $("#require-external-approval").checked = state.settings.requireExternalApproval !== false;
+  $("#require-rule-approval").checked = state.settings.requireRuleApproval !== false;
+  syncAgentSettingsState();
+}
+
+function syncAgentSettingsState() {
+  const enabled = $("#agent-zero-enabled").checked;
+  $$("#settings-form .agent-zero-fields input").forEach((input) => {
+    input.disabled = !enabled;
+  });
+}
+
+function collectSettingsForm() {
+  const processingMode =
+    $('input[name="processingMode"]:checked')?.value || "codex";
+  return {
+    vaultPath: $("#settings-vault-path").value.trim(),
+    theme: $("#theme-select").value,
+    processingMode,
+    codexEnabled: $("#codex-enabled").checked,
+    agentZeroEnabled: $("#agent-zero-enabled").checked,
+    agentZeroBaseUrl: $("#agent-zero-base-url").value.trim(),
+    agentZeroProject: $("#agent-zero-project").value.trim(),
+    agentZeroToken: $("#agent-zero-token").value.trim(),
+    clearAgentZeroToken: $("#clear-agent-zero-token").checked,
+    requireExternalApproval: $("#require-external-approval").checked,
+    requireRuleApproval: $("#require-rule-approval").checked,
+    objectTypes: Object.fromEntries(
+      $$('[data-object-setting]').map((input) => [
+        input.dataset.objectSetting,
+        input.checked,
+      ]),
+    ),
+  };
+}
+
+function applyObjectVisibility() {
+  const objectTypes = { ...DEFAULT_OBJECT_TYPES, ...(state.settings.objectTypes || {}) };
+  const dashboard = $(".dashboard-grid");
+  dashboard.classList.toggle("objects-no-tasks", objectTypes.tasks === false);
+  dashboard.classList.toggle("objects-no-projects", objectTypes.projects === false);
+  $$('[data-object-type]').forEach((node) => {
+    node.hidden = objectTypes[node.dataset.objectType] === false;
+  });
+  $$('[data-object-group]').forEach((node) => {
+    const keys = node.dataset.objectGroup.split(/\s+/).filter(Boolean);
+    node.hidden = !keys.some((key) => objectTypes[key] !== false);
+  });
+  const routinesTab = $('.tab[data-tab="routines"]');
+  if (routinesTab) routinesTab.hidden = objectTypes.routines === false;
+  if (state.taskTab === "routines" && objectTypes.routines === false) {
+    state.taskTab = "thisWeek";
+  }
 }
 
 function showVaultDialog() {
@@ -192,6 +283,7 @@ async function loadDashboard() {
 }
 
 function render() {
+  applyObjectVisibility();
   renderDate();
   renderMode();
   renderStats();
@@ -1619,21 +1711,84 @@ async function copyText(text, message) {
   }
 }
 
-function inboxPrompt() {
+function renderProcessingDialog() {
+  const codexButton = $('[data-processing-agent="codex"]');
+  const agentZeroButton = $('[data-processing-agent="agent-zero"]');
+  codexButton.disabled = state.settings.codexEnabled === false;
+  agentZeroButton.disabled =
+    state.settings.agentZeroEnabled !== true ||
+    state.settings.agentZeroTokenConfigured !== true;
+  codexButton.hidden = state.settings.processingMode === "agent-zero";
+  agentZeroButton.hidden = state.settings.processingMode === "codex";
+  const count = state.data?.stats?.captureToProcess || 0;
+  $("#processing-status").textContent = count
+    ? `${count} Capture item${count === 1 ? "" : "s"} available.`
+    : "Capture is clear.";
+}
+
+function openInboxProcessing() {
+  renderProcessingDialog();
+  if (!$("#processing-dialog").open) $("#processing-dialog").showModal();
+}
+
+async function runInboxProcessor(processor) {
+  const buttons = $$("[data-processing-agent]");
+  buttons.forEach((button) => {
+    button.disabled = true;
+  });
+  $("#processing-status").textContent =
+    processor === "agent-zero"
+      ? "Agent Zero is preparing a scoped Review proposal..."
+      : "Preparing a leased Codex request...";
+  try {
+    const result = await postAction("/api/actions/prepare-inbox-processing", { processor });
+    if (result.mode === "copy") {
+      await copyText(
+        result.prompt,
+        `Codex request copied for ${result.captureCount} Capture item${result.captureCount === 1 ? "" : "s"}.`,
+      );
+    } else if (result.relativePath) {
+      toast(result.message);
+      await loadDashboard();
+      await AtlasApi.openExternal(obsidianUrl(result.relativePath));
+    }
+    if ($("#processing-dialog").open) $("#processing-dialog").close();
+  } catch (error) {
+    $("#processing-status").textContent = error.message;
+    $('[data-processing-agent="codex"]').disabled = state.settings.codexEnabled === false;
+    $('[data-processing-agent="agent-zero"]').disabled =
+      state.settings.agentZeroEnabled !== true ||
+      state.settings.agentZeroTokenConfigured !== true;
+  }
+}
+
+function openCustomObjectDialog() {
+  if ($("#settings-dialog").open) $("#settings-dialog").close();
+  const agentZeroOption = $('#custom-object-processor option[value="agent-zero"]');
+  agentZeroOption.disabled =
+    state.settings.agentZeroEnabled !== true ||
+    state.settings.agentZeroTokenConfigured !== true;
+  if (agentZeroOption.disabled && $("#custom-object-processor").value === "agent-zero") {
+    $("#custom-object-processor").value = "codex";
+  }
+  $("#custom-object-dialog").showModal();
+}
+
+function customObjectDescription(values) {
   return [
-    "Process Atlas Capture folder only.",
-    "Read the Atlas system rules first.",
-    "Preserve untouched originals before processing.",
-    "Create review-ready notes with Quick Approval blocks and refresh the Review Queue.",
-    "Scan every daily capture for natural-language Atlas requests, even when they are not explicitly labeled.",
-    "For atlas-request captures, identify whether they are routine, priority, project, or Atlas App feature requests.",
-    "Classify extracted actions as one-time tasks, checklist tasks, routines, or project candidates so minor repeated items do not crowd the focused task list.",
-    "For routine requests, infer cadence, fields, routine mode, measurement kind, and any initial entries from the user's natural language.",
-    "For priority, project, and feature requests, make clear safe updates when Atlas rules allow it, and route ambiguous or broad changes to Review.",
-    "For Capture items older than seven days, process and file directly when clear, then delete the working capture after verifying an identical preserved original and completed filing.",
-    "Do not process or file existing Review decisions unless I have checked their approval boxes.",
-    "Do not delete fresh working captures unless cleanup is explicitly approved.",
-  ].join(" ");
+    `Object name: ${String(values.name || "").trim()}`,
+    "",
+    "What it tracks:",
+    String(values.tracks || "").trim(),
+    "",
+    "Processing behavior:",
+    String(values.processing || "").trim(),
+    "",
+    "Ultimate goal:",
+    String(values.goal || "").trim(),
+    "",
+    `Preferred setup processor: ${values.preferredAgent === "agent-zero" ? "Agent Zero" : "Codex local"}`,
+  ].join("\n");
 }
 
 function dayReviewPrompt() {
@@ -1687,9 +1842,13 @@ $("#focus-action").addEventListener("click", () => {
   $("#focus-dialog").showModal();
 });
 
-$("#process-action").addEventListener("click", () =>
-  copyText(inboxPrompt(), "Inbox-processing request copied. Paste it into your Atlas agent."),
-);
+$("#process-action").addEventListener("click", openInboxProcessing);
+
+$("#processing-dialog").addEventListener("click", (event) => {
+  const button = event.target.closest("[data-processing-agent]");
+  if (!button || button.disabled) return;
+  runInboxProcessor(button.dataset.processingAgent);
+});
 
 $("#day-review-action").addEventListener("click", openCloseout);
 
@@ -1987,7 +2146,7 @@ $("#midday-dialog-content").addEventListener("click", async (event) => {
   }
 
   if (event.target.closest("#midday-copy-process")) {
-    copyText(inboxPrompt(), "Inbox-processing request copied. Paste it into your Atlas agent.");
+    openInboxProcessing();
     return;
   }
 
@@ -2230,13 +2389,17 @@ $("#settings-choose-vault").addEventListener("click", () => {
   chooseVaultPath().catch((error) => toast(error.message));
 });
 
+$("#add-custom-object").addEventListener("click", openCustomObjectDialog);
+
+$("#agent-zero-enabled").addEventListener("change", syncAgentSettingsState);
+
 $("#save-vault-path-action").addEventListener("click", () => {
   saveVaultPath($("#vault-path-input").value).catch((error) => toast(error.message));
 });
 
 $("#settings-form").addEventListener("submit", async (event) => {
   event.preventDefault();
-  const values = Object.fromEntries(new FormData(event.currentTarget).entries());
+  const values = collectSettingsForm();
   try {
     state.settings = await AtlasApi.saveSettings(values);
     applyTheme(state.settings.theme);
@@ -2244,6 +2407,23 @@ $("#settings-form").addEventListener("submit", async (event) => {
     $("#settings-dialog").close();
     await loadDashboard();
     toast("Settings saved.");
+  } catch (error) {
+    toast(error.message);
+  }
+});
+
+$("#custom-object-form").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const values = Object.fromEntries(new FormData(event.currentTarget).entries());
+  try {
+    const result = await postAction("/api/actions/create-atlas-request", {
+      kind: "object",
+      description: customObjectDescription(values),
+    });
+    event.currentTarget.reset();
+    $("#custom-object-dialog").close();
+    await loadDashboard();
+    toast(result.message);
   } catch (error) {
     toast(error.message);
   }
