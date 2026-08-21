@@ -1,0 +1,191 @@
+/* ============================================================
+   ATLAS DESIGN TOKENS
+   One structure, many skins. :root holds the structural tokens
+   (type, rhythm, radius, shadows, easing) plus the default
+   "Signal" palette; each [data-theme] block re-skins colour,
+   accent, gradient and shadow tint. Components read tokens only,
+   so a theme switch needs no per-component rules.
+   ============================================================ */
+
+:root {
+  /* ---- Default palette: Signal (warm light, Atlas orange) ---- */
+  --bg: #fbf7f2;
+  --bg-raise: #fffdfa;
+  --bg-sunken: #f4ebe0;
+  --ink: #221208;
+  --ink-2: #5c4636;
+  --ink-3: #8c7765;
+  --rule: #ecdccb;
+  --rule-strong: #221208;
+
+  --signal: #ff5a1f;          /* the system's voice */
+  --signal-ink: #ffffff;
+  --calm: #1f3d2b;
+  --calm-soft: #f3ece2;
+  --done: #2e9e63;
+  --warn: #d9831f;
+
+  --grad-accent: linear-gradient(135deg, #ff8a3d 0%, #ff5a1f 45%, #ff3d6e 100%);
+  --grad-accent-soft: linear-gradient(135deg, color-mix(in srgb, #ff8a3d 15%, var(--bg-raise)), color-mix(in srgb, #ff3d6e 11%, var(--bg-raise)));
+  --grad-canvas: radial-gradient(120% 85% at 100% 0%, #ffe7d2 0%, transparent 55%);
+  --shadow-rgb: 120 70 30;
+  --glow: color-mix(in srgb, var(--signal) 38%, transparent);
+
+  /* ---- Structural: rounding, soft shadows, motion (all themes) ---- */
+  --radius-sm: 8px;
+  --radius: 12px;
+  --radius-lg: 18px;
+  --radius-pill: 999px;
+  --ease: cubic-bezier(0.22, 0.7, 0.2, 1);
+
+  --shadow-sm: 0 1px 2px rgb(var(--shadow-rgb) / 0.08), 0 1px 4px rgb(var(--shadow-rgb) / 0.05);
+  --shadow: 0 4px 14px rgb(var(--shadow-rgb) / 0.10), 0 1px 4px rgb(var(--shadow-rgb) / 0.06);
+  --shadow-lg: 0 18px 44px rgb(var(--shadow-rgb) / 0.16), 0 6px 16px rgb(var(--shadow-rgb) / 0.09);
+  --shadow-glow: 0 6px 22px var(--glow);
+
+  /* Type */
+  --font-body: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, monospace;
+  --font-serif: "Iowan Old Style", Georgia, "Times New Roman", serif;
+  --font-editor: var(--font-body);
+
+  /* Comfortable (default) scale — Settings → Appearance swaps these */
+  --text-xs: 11.5px;
+  --text-sm: 14px;
+  --text-md: 16px;
+  --text-lg: 20px;
+  --text-xl: 29px;
+  --text-display: clamp(34px, 4vw, 52px);
+
+  --track-label: 0.12em;
+
+  /* Rhythm */
+  --pad: 20px;
+  --rail-w: 224px;
+}
+
+/* ===================== Minimal themes ===================== */
+
+[data-theme="paper"] {
+  --bg: #fbfbf9;
+  --bg-raise: #ffffff;
+  --bg-sunken: #f0f0ea;
+  --ink: #14140e;
+  --ink-2: #45453c;
+  --ink-3: #6e6e64;
+  --rule: #e4e4db;
+  --rule-strong: #14140e;
+  --signal: #ff5a1f;
+  --signal-ink: #ffffff;
+  --calm: #1f3d2b;
+  --calm-soft: #eef2ec;
+  --done: #2e9e63;
+  --warn: #c97a18;
+  --grad-accent: linear-gradient(135deg, #ff7a3d, #ff4d4d);
+  --grad-accent-soft: linear-gradient(135deg, color-mix(in srgb, #ff7a3d 13%, var(--bg-raise)), color-mix(in srgb, #ff4d4d 9%, var(--bg-raise)));
+  --grad-canvas: none;
+  --shadow-rgb: 40 40 32;
+  --glow: color-mix(in srgb, var(--signal) 26%, transparent);
+}
+
+[data-theme="ink"] {
+  --bg: #101013;
+  --bg-raise: #191920;
+  --bg-sunken: #0b0b0e;
+  --ink: #f1f1ec;
+  --ink-2: #b4b4ab;
+  --ink-3: #74746a;
+  --rule: #27272e;
+  --rule-strong: #f1f1ec;
+  --signal: #ff6a3d;
+  --signal-ink: #1a1206;
+  --calm: #9dbfa8;
+  --calm-soft: #16201a;
+  --done: #4ec98a;
+  --warn: #e0913a;
+  --grad-accent: linear-gradient(135deg, #ff8a4d, #ff4d6d);
+  --grad-accent-soft: linear-gradient(135deg, color-mix(in srgb, #ff8a4d 22%, var(--bg-raise)), color-mix(in srgb, #ff4d6d 16%, var(--bg-raise)));
+  --grad-canvas: none;
+  --shadow-rgb: 0 0 0;
+  --glow: color-mix(in srgb, var(--signal) 30%, transparent);
+}
+
+/* ===================== Vibrant themes ===================== */
+
+[data-theme="ocean"] {
+  --bg: #f2f8fc;
+  --bg-raise: #ffffff;
+  --bg-sunken: #e2eef6;
+  --ink: #0b1b26;
+  --ink-2: #33526a;
+  --ink-3: #5d788c;
+  --rule: #d2e6f0;
+  --rule-strong: #0b1b26;
+  --signal: #0ea5e9;
+  --signal-ink: #ffffff;
+  --calm: #0e7490;
+  --calm-soft: #e0f2fe;
+  --done: #10b981;
+  --warn: #f59e0b;
+  --grad-accent: linear-gradient(135deg, #2563eb 0%, #06b6d4 55%, #34d399 100%);
+  --grad-accent-soft: linear-gradient(135deg, color-mix(in srgb, #2563eb 13%, var(--bg-raise)), color-mix(in srgb, #34d399 11%, var(--bg-raise)));
+  --grad-canvas: radial-gradient(120% 85% at 0% 0%, #d8f0fb 0%, transparent 55%);
+  --shadow-rgb: 20 70 100;
+  --glow: color-mix(in srgb, var(--signal) 36%, transparent);
+}
+
+[data-theme="aurora"] {
+  --bg: #0c0e1a;
+  --bg-raise: #161a2c;
+  --bg-sunken: #0a0b16;
+  --ink: #eef0ff;
+  --ink-2: #a9b0d6;
+  --ink-3: #6f7498;
+  --rule: #262b46;
+  --rule-strong: #eef0ff;
+  --signal: #8b5cf6;
+  --signal-ink: #ffffff;
+  --calm: #22d3ee;
+  --calm-soft: #15203a;
+  --done: #34d399;
+  --warn: #fbbf24;
+  --grad-accent: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #06b6d4 100%);
+  --grad-accent-soft: linear-gradient(135deg, color-mix(in srgb, #6366f1 26%, var(--bg-raise)), color-mix(in srgb, #06b6d4 20%, var(--bg-raise)));
+  --grad-canvas: radial-gradient(110% 80% at 100% 0%, #1e2150 0%, transparent 55%), radial-gradient(90% 75% at 0% 100%, #0e2a3a 0%, transparent 55%);
+  --shadow-rgb: 4 4 24;
+  --glow: color-mix(in srgb, var(--signal) 46%, transparent);
+}
+
+[data-theme="sunset"] {
+  --bg: #1a1016;
+  --bg-raise: #251820;
+  --bg-sunken: #130a10;
+  --ink: #ffeef3;
+  --ink-2: #d8b1bf;
+  --ink-3: #9d7380;
+  --rule: #3a2330;
+  --rule-strong: #ffeef3;
+  --signal: #ff4d8d;
+  --signal-ink: #ffffff;
+  --calm: #fca5a5;
+  --calm-soft: #2a1620;
+  --done: #4ade80;
+  --warn: #fbbf24;
+  --grad-accent: linear-gradient(135deg, #ff7a3d 0%, #ff4d8d 55%, #a855f7 100%);
+  --grad-accent-soft: linear-gradient(135deg, color-mix(in srgb, #ff7a3d 24%, var(--bg-raise)), color-mix(in srgb, #a855f7 18%, var(--bg-raise)));
+  --grad-canvas: radial-gradient(110% 80% at 100% 0%, #3a1828 0%, transparent 55%), radial-gradient(90% 75% at 0% 100%, #2a1430 0%, transparent 55%);
+  --shadow-rgb: 30 4 16;
+  --glow: color-mix(in srgb, var(--signal) 42%, transparent);
+}
+
+/* Text size — Settings → Appearance */
+:root[data-scale="compact"] {
+  --text-xs: 11px; --text-sm: 13px; --text-md: 15px; --text-lg: 19px; --text-xl: 28px;
+}
+:root[data-scale="large"] {
+  --text-xs: 12.5px; --text-sm: 15px; --text-md: 17.5px; --text-lg: 22px; --text-xl: 31px;
+  --text-display: clamp(38px, 4.4vw, 56px);
+}
+
+/* Editor face — Settings → Appearance */
+:root[data-editorfont="serif"] { --font-editor: var(--font-serif); }

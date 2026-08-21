@@ -1,22 +1,24 @@
 [package]
-name = "atlas-dashboard"
+name = "atlas"
 version = "0.1.0"
-description = "Atlas local-first productivity dashboard"
-authors = ["Atlas App Contributors"]
+description = "Atlas — markdown-native personal knowledge OS"
 edition = "2021"
-
-[lib]
-name = "atlas_dashboard_lib"
-crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
-chrono = { version = "0.4", features = ["clock", "serde"] }
-open = "5"
-reqwest = { version = "0.12", default-features = false, features = ["blocking", "json", "rustls-tls"] }
+chrono = { version = "0.4", features = ["clock"] }
+tauri = { version = "2", features = ["protocol-asset"] }
+tauri-plugin-fs = "2"
+tauri-plugin-dialog = "2"
+tauri-plugin-store = "2"
+tauri-plugin-http = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-tauri = { version = "2", features = [] }
-tauri-plugin-dialog = "2"
+tauri-plugin-opener = "2"
+reqwest = { version = "0.12", default-features = false, features = ["blocking", "json", "rustls-tls"] }
+
+[lib]
+name = "atlas_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]

@@ -1,62 +1,66 @@
 # Architecture
 
-Atlas App has three layers.
+Atlas App has three local layers.
 
-## 1. Vault
+## React Interface
 
-The vault is a private folder of Markdown files. It is the source of truth.
+`src/` contains the Vite and React UI. It builds an in-memory object index from
+the connected Markdown files and renders the dashboard, calendar, editor,
+object browsers, settings, and review flows.
 
-Required top-level folders:
+In browser development mode, filesystem and settings calls use the fictional
+in-memory vault in `src/lib/demoFs.ts`. Browser mode is a UI preview, not the
+desktop security model.
+
+## Tauri Shell
+
+`src-tauri/` contains the Rust desktop shell. It:
+
+- grants Tauri filesystem scope only to the selected vault;
+- restores the saved scope at launch;
+- stores local secret and lease state outside the vault;
+- runs YouTube requests that cannot originate from the webview;
+- reserves bounded Capture batches for Codex or Agent Zero;
+- sends Agent Zero A2A requests and saves responses to Review;
+- appends native workflow writes to `00-System/Change-Log.md`.
+
+## Markdown Vault
+
+The vault remains the durable database. Objects are classified by frontmatter
+`type` first and folder prefix second. Object definitions are a folder,
+frontmatter type, and property schema. Custom definitions live at
+`.atlas/types.json` in the user's vault so they remain portable with the notes.
+
+The complete Atlas workflow uses:
 
 ```text
 00-System/
-01-Inbox/
+01-Inbox/01-Capture/
+01-Inbox/02-Review/
 02-Library/
 03-Projects/
 04-Relationships/
 05-Tasks/
 ```
 
-## 2. Local App Service
-
-`server.js` is the browser-mode local service. It:
-
-- serves files from `public/`
-- reads Markdown from the configured vault
-- exposes dashboard data
-- performs explicit semantic writes such as create capture, complete task, move task, log routine, and save request
-- appends changes to the vault change log
-
-The service only binds to `127.0.0.1` by default.
-
-Local operational state lives outside the vault:
+## Processing Boundary
 
 ```text
-.atlas-local/settings.json    non-secret browser preferences
-.atlas-local/secrets.json     Agent Zero A2A token, mode 0600 when supported
-.atlas-local/agent-jobs.json  short processing leases and job outcomes
+Capture
+  -> one-hour, per-vault lease (maximum 12 files / 120,000 characters)
+  -> Codex path-scoped handoff
+     OR Agent Zero content-scoped A2A request
+  -> permitted filing or Review proposal
+  -> completion, failure, or lease expiry
 ```
 
-These files are ignored by Git. The Tauri shell stores the same state in the OS app config directory.
-
-## 3. Tauri Shell
-
-`src-tauri/` provides a desktop shell. It stores the selected vault path in the app config directory and uses Tauri commands for native file access.
+Codex reads only the absolute paths listed in its handoff. Agent Zero receives
+the leased contents as framed private data and its response is capped at 250 KB.
+Plain HTTP Agent Zero URLs are accepted only on loopback; remote instances must
+use HTTPS.
 
 ## Design Rule
 
-Prefer narrow operations over generic file writes. A button such as `Complete task` is safer than an endpoint that writes arbitrary text to arbitrary paths.
-
-## Hybrid Processing
-
-```text
-Capture item
--> Atlas lease
--> Codex local handoff OR Agent Zero A2A dispatch
--> Review or permitted filing
--> lease completion or expiry
-```
-
-Codex authenticates independently through its local ChatGPT sign-in. Agent Zero authenticates independently through its A2A token. Atlas never converts, copies, or brokers one agent's credential to the other.
-
-Agent Zero receives only the Capture content assigned to the job. Its response becomes an Atlas Review note; it does not receive a vault write path from this workflow.
+Prefer semantic operations over generic remote write access. The desktop UI
+may edit the chosen vault as the user, but an external agent begins with a
+bounded job and a Review proposal, not an unrestricted filesystem mount.

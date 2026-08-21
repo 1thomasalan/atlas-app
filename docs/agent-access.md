@@ -23,6 +23,8 @@ Capture -> Atlas lease -> Codex local handoff
 
 Codex leases expire after one hour if the local handoff is not completed. Agent Zero jobs complete when Atlas receives and saves the A2A response; failures release the Capture paths for a later attempt.
 
+Codex handoffs also carry the inbox aging rule: items older than seven days may be filed directly when the destination is clear, while originals must be preserved and verified before cleanup. Processed filenames keep their original stem and add ` - Processed` without a duplicate date.
+
 ## Settings
 
 The processing mode can be `Codex`, `Agent Zero`, or `Hybrid`. Hybrid mode presents both processors at dispatch time; it does not send the same Capture to both.

@@ -29,18 +29,18 @@ This repo must not contain:
 
 ## Development
 
-Use `.env.local` or app settings to point to a local vault. Keep that config untracked.
+Use app settings to point to a local vault. Keep all local state untracked.
 
 Before publishing changes, run:
 
 ```bash
-npm run check:web
+npm run check:all
 ```
 
 Then scan for private data:
 
 ```bash
-rg -n "private-term|api_key|password|token|secret" .
+git ls-files -z | xargs -0 rg -n "api[_-]?key|password|token|secret|/Users/|/home/"
 ```
 
 ## Architecture Rule

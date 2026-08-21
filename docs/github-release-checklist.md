@@ -1,21 +1,21 @@
 # Public GitHub Checklist
 
-Before pushing `atlas-app` to a public GitHub repository:
+Before pushing `atlas-app` to a public repository:
 
-- Confirm the repo contains app code, docs, and templates only.
-- Confirm your real Atlas vault is outside the repo.
-- Confirm `.env.local` and `.atlas-local/` are not tracked.
-- Run `npm run check:web`.
-- Run a private-data scan with `rg`.
-- Review `docs/security.md`.
-- Decide whether MIT is the license you want to keep.
-- Create the GitHub repository as public.
-- Push only after the scan is clean.
+- Confirm the working tree contains source, docs, templates, and fictional
+  demo data only.
+- Confirm the real vault is outside the repository.
+- Run `npm run check:all`.
+- Build the Tauri bundle on a supported desktop platform.
+- Exercise the browser demo at desktop and narrow widths.
+- Scan tracked files for credentials, home-directory paths, names, locations,
+  and private project terms.
+- Inspect `git diff --check` and the exact staged file list.
+- Confirm `.env*`, `.atlas-local/`, `.atlas/`, app settings, and Cargo/Node
+  build output are untracked.
+- Review `docs/security.md` and `docs/agent-access.md` after any permission or
+  processor change.
+- Push without force and verify the remote commit.
 
-Suggested remote:
-
-```bash
-git remote add origin git@github.com:<owner>/atlas-app.git
-git branch -M main
-git push -u origin main
-```
+Never use a real Capture excerpt as a test fixture. Reproduce with
+`demo-vault/` or `src/lib/demoFs.ts`.

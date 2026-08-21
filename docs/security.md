@@ -1,55 +1,58 @@
 # Security
 
-Atlas App is local-first, but local-first does not mean careless.
+Atlas is local-first, but the public code repository and the private vault are
+separate trust zones.
 
-## Public Repo Boundary
+## Never Commit
 
-Keep this repo limited to:
+- a real vault or Obsidian configuration;
+- Capture or Review contents;
+- health, relationship, or project notes;
+- local app settings or job files;
+- API keys, tokens, passwords, cookies, or recovery codes;
+- `.env*`, `.atlas-local/`, `.atlas/`, or editor-agent state.
 
-- source code
-- build config
-- public docs
-- starter templates
-- example agent instructions
+Root-level Atlas vault folders are ignored as an additional guard. Generic
+fixtures belong only in `demo-vault/`, `templates/`, or the in-memory demo.
 
-Do not commit:
+## Vault Scope
 
-- real vault folders
-- captures
-- inbox originals
-- review archives
-- relationship notes
-- health logs
-- project notes with private context
-- `.env.local`
-- `.atlas-local/`
-- API keys, tokens, passwords, recovery codes, or credentials
+The Tauri filesystem plugin is scoped at runtime to the folder selected by the
+user, including its `.atlas` and `.trash` directories. Inbox processing also
+canonicalizes the requested path and requires it to equal the saved vault.
+Symlinked Capture files are skipped.
 
-## Vault Path
+The webview can make HTTPS requests for existing features such as OpenAI,
+Todoist, metadata, images, weather, and geocoding. Plain HTTP webview access is
+limited to loopback. Agent Zero dispatch runs in Rust and is not exposed as a
+general browser request capability.
 
-The browser server reads the vault path from `ATLAS_VAULT_PATH` or ignored local settings in `.atlas-local/settings.json`.
+## Agent Jobs
 
-The Tauri app stores the selected vault path in the OS app config directory.
-
-Neither path should be committed.
-
-## Agent Access
-
-Agents should not receive blanket access to the private vault. Atlas hybrid processing uses:
-
-- disabled by default
-- separate Codex and Agent Zero authentication
-- a permission-restricted local Agent Zero secret file
-- one processor lease per Capture item
-- explicit selection before private Capture content is sent to Agent Zero
-- explicit action logs
-- Review notes for Agent Zero results
-- approval gates for external actions and durable rule changes
-
-The Agent Zero token grants access to that Agent Zero instance. Use a local instance when possible. Atlas permits unencrypted HTTP only for loopback addresses and requires HTTPS for remote instance URLs.
-
-Atlas does not read or copy Codex's cached ChatGPT authentication. Codex remains responsible for its own local sign-in and permission profile.
+- Agent access is opt-in.
+- Codex and Agent Zero use separate credentials.
+- Leases prevent the same Capture path from being claimed twice concurrently.
+- Expired and failed jobs release their paths.
+- Agent Zero receives only the leased Capture content.
+- Capture contents are framed as private data, not trusted instructions.
+- Agent Zero can create only a Review proposal through this workflow.
+- External actions and durable rule changes require explicit approval.
+- Agent responses and batches have hard size limits.
 
 ## Secrets
 
-Atlas Markdown should not be a secret store. Store general credentials in a password manager or OS-backed secret storage. Browser mode stores the Agent Zero A2A token in ignored local state with mode `0600` when the filesystem supports it; the token is never returned to the browser after saving. Markdown can reference that a credential exists without copying the value.
+The Agent Zero token is saved separately in the OS app configuration directory,
+with mode `0600` on Unix. The settings API returns only a configured/not
+configured status. The token is never written to Markdown, logs, Review notes,
+or Git.
+
+Other provider credentials use the local Tauri settings store. They are outside
+the vault but are not a replacement for a system keychain. Use restricted keys,
+rotate compromised credentials, and keep account recovery material in a
+password manager.
+
+## Reporting
+
+Do not include real vault excerpts or credentials in a public issue. Reproduce
+with the fictional demo vault and redact absolute paths, account names, and
+tokens from logs.

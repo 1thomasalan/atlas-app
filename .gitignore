@@ -1,54 +1,41 @@
-# Dependencies
-node_modules/
-
-# Local config and secrets
-.env
-.env.*
-!.env.example
-.atlas-local/
+node_modules
+dist/
+src-tauri/target/
+src-tauri/gen/
+target/
+.DS_Store
+*.local
 *.local.json
-
-# Logs
 *.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-
-# macOS
-.DS_Store
-
-# Tauri and Rust build output
-src-tauri/target/
-src-tauri/gen/
-target/
-
-# App bundles and packaged builds
 *.app/
 *.dmg
 *.msi
 *.AppImage
 
-# Private Atlas vault data should not live in this repo.
-01-Inbox/
-02-Library/
-03-Projects/
-04-Relationships/
-05-Tasks/
-00-System/Change-Log.md
-02-Library/Sources/Inbox-Originals/
-02-Library/Sources/Review-Archive/
+# Environment and local app state
+.env
+.env.*
+.atlas-local/
+/.atlas/
+atlas-settings.json
+agent-secrets.json
+agent-jobs.json
 
-# Keep the public template vault tracked.
-!templates/vault/01-Inbox/
-!templates/vault/01-Inbox/**
-!templates/vault/02-Library/
-!templates/vault/02-Library/**
-!templates/vault/03-Projects/
-!templates/vault/03-Projects/**
-!templates/vault/04-Relationships/
-!templates/vault/04-Relationships/**
-!templates/vault/05-Tasks/
-!templates/vault/05-Tasks/**
-!templates/vault/00-System/
-!templates/vault/00-System/**
-!templates/vault/00-System/Change-Log.md
+# Local tooling / editor config
+.claude/
+.codex/
+.agents/
+.vscode/
+
+# Never place a real vault at the repository root
+/00-System/
+/01-Inbox/
+/02-Library/
+/03-Projects/
+/04-Relationships/
+/05-Tasks/
+/.obsidian/
+/.trash/

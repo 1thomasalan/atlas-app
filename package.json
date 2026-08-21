@@ -1,17 +1,48 @@
 {
   "name": "atlas-app",
-  "version": "0.1.0",
   "private": true,
-  "description": "Local-first app for an Atlas Markdown vault.",
+  "version": "0.1.0",
+  "description": "Local-first second-brain app for an Obsidian Markdown vault with optional scoped agent workflows via API.",
+  "type": "module",
   "scripts": {
-    "serve": "node server.js",
-    "dev:server": "node dev-server.js",
-    "check:web": "node --check public/atlas-api.js && node --check public/app.js && node --check server.js && node --check dev-server.js",
-    "tauri": "tauri",
-    "dev": "tauri dev",
-    "build": "tauri build"
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "typecheck": "tsc --noEmit",
+    "check": "npm run build",
+    "check:web": "npm run check",
+    "check:rust": "cargo fmt --check --manifest-path src-tauri/Cargo.toml && cargo test --manifest-path src-tauri/Cargo.toml",
+    "check:all": "npm run check && npm run check:rust",
+    "preview": "vite preview",
+    "tauri": "tauri"
+  },
+  "dependencies": {
+    "@dnd-kit/core": "^6.1.0",
+    "@tauri-apps/api": "^2.1.1",
+    "@tauri-apps/plugin-dialog": "^2.0.1",
+    "@tauri-apps/plugin-fs": "^2.0.2",
+    "@tauri-apps/plugin-http": "^2.0.1",
+    "@tauri-apps/plugin-opener": "^2.5.4",
+    "@tauri-apps/plugin-store": "^2.1.0",
+    "@tiptap/extension-highlight": "^2.27.2",
+    "@tiptap/extension-image": "^2.27.2",
+    "@tiptap/extension-link": "^2.27.2",
+    "@tiptap/extension-task-item": "^2.27.2",
+    "@tiptap/extension-task-list": "^2.27.2",
+    "@tiptap/react": "^2.6.6",
+    "@tiptap/starter-kit": "^2.6.6",
+    "dompurify": "^3.1.6",
+    "exifr": "^7.1.3",
+    "marked": "^14.1.2",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "tiptap-markdown": "^0.8.10"
   },
   "devDependencies": {
-    "@tauri-apps/cli": "^2.0.0"
+    "@tauri-apps/cli": "^2.1.0",
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
+    "@vitejs/plugin-react": "^4.3.1",
+    "typescript": "^5.5.4",
+    "vite": "^5.4.8"
   }
 }

@@ -37,6 +37,7 @@ For stale captures:
 5. Create Review notes for unresolved ambiguity or sensitive decisions.
 6. Delete the working Capture only after verifying the preserved original.
 7. Log the cleanup.
+8. When renaming a processed capture, keep its current filename stem and append ` - Processed`; do not add another date.
 
 Fresh captures still use Review unless the change is low-risk or explicitly requested.
 

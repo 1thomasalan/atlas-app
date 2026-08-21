@@ -11,6 +11,8 @@ Infer intent proactively from natural notes, questions, breadcrumbs, research re
 
 Do not move or delete fresh capture files during processing. For Capture items older than seven days, process and file directly when clear, then delete the working capture after verifying an identical preserved original and completed filing.
 
+When renaming a processed capture, preserve its existing filename stem and append ` - Processed`. Never prefix a second date.
+
 Copy untouched originals to `02-Library/Sources/Inbox-Originals/`.
 
 Create processed notes in `01-Inbox/02-Review/` with `status: under-review`.
