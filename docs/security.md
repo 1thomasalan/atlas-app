@@ -41,15 +41,20 @@ general browser request capability.
 
 ## Secrets
 
-The Agent Zero token is saved separately in the OS app configuration directory,
-with mode `0600` on Unix. The settings API returns only a configured/not
-configured status. The token is never written to Markdown, logs, Review notes,
-or Git.
+OpenAI, Todoist, and Agent Zero credentials are stored in the operating
+system's native credential manager: macOS Keychain, Windows Credential Manager,
+or a Linux Secret Service. The Agent Zero settings API returns only a
+configured/not configured status.
 
-Other provider credentials use the local Tauri settings store. They are outside
-the vault but are not a replacement for a system keychain. Use restricted keys,
-rotate compromised credentials, and keep account recovery material in a
-password manager.
+On upgrade, Atlas migrates legacy plaintext credentials into secure storage,
+reads them back to verify the copy, removes the plaintext fields, deletes the
+legacy Agent Zero secret file, and restricts the remaining settings file to
+mode `0600` on Unix. A credential-store failure leaves the legacy value intact
+so migration cannot silently lose access.
+
+Credentials are never written to Markdown, logs, Review notes, or Git. Use
+restricted keys, rotate compromised credentials, and keep account recovery
+material in a password manager.
 
 ## Reporting
 

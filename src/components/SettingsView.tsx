@@ -13,7 +13,7 @@ const CORE_TYPE_KEYS = new Set(["daily", "person", "place", "task"]);
 
 export default function SettingsView(props: {
   settings: Settings;
-  onSave: (s: Settings) => void;
+  onSave: (s: Settings) => Promise<void>;
   allTypes: ObjectTypeDef[];
   customTypes: ObjectTypeDef[];
   onSaveTypes: (types: ObjectTypeDef[]) => void;
@@ -67,9 +67,13 @@ export default function SettingsView(props: {
   useEffect(() => { saveRef.current = props.onSave; }, [props.onSave]);
   useEffect(() => {
     if (!booted.current) { booted.current = true; return; }
-    const t = window.setTimeout(() => saveRef.current(s), 600);
+    const t = window.setTimeout(() => {
+      void saveRef.current(s).catch((error) => {
+        props.toast(error instanceof Error ? error.message : "Atlas could not save settings");
+      });
+    }, 600);
     return () => window.clearTimeout(t);
-  }, [s]);
+  }, [s, props.toast]);
 
   const toggleType = (key: string) => {
     const disabled = new Set(s.disabledTypeKeys);
@@ -83,7 +87,7 @@ export default function SettingsView(props: {
       const status = await saveAgentZeroToken(clear ? "" : agentToken);
       setAgentTokenConfigured(status.configured);
       setAgentToken("");
-      props.toast(status.configured ? "Agent Zero token saved locally" : "Agent Zero token cleared");
+      props.toast(status.configured ? "Agent Zero token saved securely" : "Agent Zero token cleared");
     } catch (error) {
       props.toast(error instanceof Error ? error.message : "Atlas could not save the Agent Zero token");
     } finally {
@@ -199,7 +203,7 @@ export default function SettingsView(props: {
             {agentTokenConfigured && <button className="btn" disabled={agentTokenBusy} onClick={() => saveAgentToken(true)}>Clear</button>}
           </div>
           <p className="hint agent-status" style={{ marginTop: 6 }}>
-            {agentTokenConfigured ? "Configured in Rust-managed local app storage" : "Not configured"}
+            {agentTokenConfigured ? "Stored in your operating system credential manager" : "Not configured"}
           </p>
         </div>
         <div className="processing-boundary">
@@ -213,7 +217,8 @@ export default function SettingsView(props: {
         <h3>Todoist</h3>
         <p className="hint">
           API token from Todoist → Settings → Integrations → Developer. Two-way sync;
-          when both sides change the same task between syncs, your vault wins.
+          when both sides change the same task between syncs, your vault wins. The token
+          is stored in your operating system credential manager.
         </p>
         <div className="field">
           <label className="eyebrow">API token</label>
@@ -227,8 +232,9 @@ export default function SettingsView(props: {
         <p className="hint">
           Powers the AI layer: semantic search in ⌘K (embeddings, cached in{" "}
           <code>.atlas/embeddings.json</code>), screenshot import for workouts and meals,
-          and the AI summary / AI tags buttons on object pages. The key is stored locally
-          in Atlas's app config, never inside your vault, never synced anywhere.
+          and the AI summary / AI tags buttons on object pages. The key is stored in your
+          operating system credential manager (macOS Keychain on Mac), never inside your
+          vault or settings file.
         </p>
         <div className="field">
           <label className="eyebrow">API key</label>

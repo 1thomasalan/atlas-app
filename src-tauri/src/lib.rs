@@ -1,3 +1,4 @@
+use keyring::{Entry, Error as KeyringError};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::{
@@ -19,6 +20,10 @@ const AGENT_JOB_LEASE_SECONDS: u64 = 60 * 60;
 const MAX_AGENT_CAPTURE_FILES: usize = 12;
 const MAX_AGENT_CAPTURE_CHARS: usize = 120_000;
 const MAX_AGENT_RESPONSE_BYTES: u64 = 250_000;
+const KEYRING_SERVICE: &str = "com.theteknologist.atlas.credentials";
+const OPENAI_KEY_ACCOUNT: &str = "openai-api-key";
+const TODOIST_TOKEN_ACCOUNT: &str = "todoist-api-token";
+const AGENT_ZERO_TOKEN_ACCOUNT: &str = "agent-zero-a2a-token";
 static AGENT_JOBS_LOCK: Mutex<()> = Mutex::new(());
 
 #[derive(Debug, Clone, Deserialize)]
@@ -36,6 +41,13 @@ struct ProcessingConfig {
 #[serde(rename_all = "camelCase")]
 struct AgentSecretStatus {
     configured: bool,
+}
+
+#[derive(Debug, Default, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct AppSecrets {
+    openai_key: String,
+    todoist_token: String,
 }
 
 #[derive(Debug, Clone)]
@@ -96,22 +108,38 @@ fn app_config_file(app: &AppHandle, name: &str) -> Result<PathBuf, String> {
     Ok(dir.join(name))
 }
 
-fn read_agent_zero_token(app: &AppHandle) -> String {
-    let Ok(path) = app_config_file(app, "agent-secrets.json") else {
-        return String::new();
-    };
-    let Ok(text) = fs::read_to_string(path) else {
-        return String::new();
-    };
-    serde_json::from_str::<Value>(&text)
-        .ok()
-        .and_then(|value| {
-            value
-                .get("agentZeroToken")
-                .and_then(Value::as_str)
-                .map(str::to_string)
-        })
-        .unwrap_or_default()
+fn credential_entry(account: &str) -> Result<Entry, String> {
+    Entry::new(KEYRING_SERVICE, account)
+        .map_err(|error| format!("Atlas could not open the OS credential store: {error}"))
+}
+
+fn read_secure_secret(account: &str) -> Result<String, String> {
+    match credential_entry(account)?.get_password() {
+        Ok(secret) => Ok(secret),
+        Err(KeyringError::NoEntry) => Ok(String::new()),
+        Err(error) => Err(format!(
+            "Atlas could not read a credential from the OS credential store: {error}"
+        )),
+    }
+}
+
+fn write_secure_secret(account: &str, secret: &str) -> Result<(), String> {
+    let entry = credential_entry(account)?;
+    if secret.is_empty() {
+        return match entry.delete_credential() {
+            Ok(()) | Err(KeyringError::NoEntry) => Ok(()),
+            Err(error) => Err(format!(
+                "Atlas could not remove a credential from the OS credential store: {error}"
+            )),
+        };
+    }
+    entry
+        .set_password(secret)
+        .map_err(|error| format!("Atlas could not save a credential securely: {error}"))
+}
+
+fn read_agent_zero_token() -> Result<String, String> {
+    read_secure_secret(AGENT_ZERO_TOKEN_ACCOUNT)
 }
 
 fn write_private_json(path: &Path, value: &Value) -> Result<(), String> {
@@ -123,14 +151,116 @@ fn write_private_json(path: &Path, value: &Value) -> Result<(), String> {
     Ok(())
 }
 
-fn write_agent_zero_token(app: &AppHandle, token: &str) -> Result<(), String> {
-    let path = app_config_file(app, "agent-secrets.json")?;
-    let value = if token.is_empty() {
-        json!({})
-    } else {
-        json!({ "agentZeroToken": token })
+fn write_agent_zero_token(token: &str) -> Result<(), String> {
+    write_secure_secret(AGENT_ZERO_TOKEN_ACCOUNT, token)
+}
+
+fn settings_store_path(app: &AppHandle) -> Result<PathBuf, String> {
+    app.path()
+        .app_data_dir()
+        .map(|dir| dir.join("atlas-settings.json"))
+        .map_err(|error| error.to_string())
+}
+
+fn harden_private_file(path: &Path) -> Result<(), String> {
+    if !path.exists() {
+        return Ok(());
+    }
+    #[cfg(unix)]
+    fs::set_permissions(path, fs::Permissions::from_mode(0o600))
+        .map_err(|error| error.to_string())?;
+    Ok(())
+}
+
+fn settings_secret(value: &Value, key: &str) -> String {
+    value
+        .get("settings")
+        .and_then(Value::as_object)
+        .and_then(|settings| settings.get(key))
+        .and_then(Value::as_str)
+        .map(str::trim)
+        .unwrap_or_default()
+        .to_string()
+}
+
+fn strip_plaintext_settings_secrets(value: &mut Value) -> bool {
+    let Some(settings) = value.get_mut("settings").and_then(Value::as_object_mut) else {
+        return false;
     };
-    write_private_json(&path, &value)
+    let mut changed = false;
+    for key in ["openaiKey", "todoistToken"] {
+        changed |= settings.remove(key).is_some();
+    }
+    changed
+}
+
+fn verify_migrated_secret(account: &str, secret: &str) -> Result<String, String> {
+    write_secure_secret(account, secret)?;
+    let stored = read_secure_secret(account)?;
+    if stored != secret {
+        return Err("Atlas could not verify a migrated credential.".to_string());
+    }
+    Ok(stored)
+}
+
+fn migrate_plaintext_credentials(app: &AppHandle) -> Result<AppSecrets, String> {
+    let settings_path = settings_store_path(app)?;
+    let mut settings_json = if settings_path.exists() {
+        let text = fs::read_to_string(&settings_path).map_err(|error| error.to_string())?;
+        Some(serde_json::from_str::<Value>(&text).map_err(|error| error.to_string())?)
+    } else {
+        None
+    };
+
+    let legacy_openai = settings_json
+        .as_ref()
+        .map(|value| settings_secret(value, "openaiKey"))
+        .unwrap_or_default();
+    let legacy_todoist = settings_json
+        .as_ref()
+        .map(|value| settings_secret(value, "todoistToken"))
+        .unwrap_or_default();
+
+    let mut openai_key = read_secure_secret(OPENAI_KEY_ACCOUNT)?;
+    if openai_key.is_empty() && !legacy_openai.is_empty() {
+        openai_key = verify_migrated_secret(OPENAI_KEY_ACCOUNT, &legacy_openai)?;
+    }
+    let mut todoist_token = read_secure_secret(TODOIST_TOKEN_ACCOUNT)?;
+    if todoist_token.is_empty() && !legacy_todoist.is_empty() {
+        todoist_token = verify_migrated_secret(TODOIST_TOKEN_ACCOUNT, &legacy_todoist)?;
+    }
+
+    if let Some(value) = settings_json.as_mut() {
+        if strip_plaintext_settings_secrets(value) {
+            write_private_json(&settings_path, value)?;
+        } else {
+            harden_private_file(&settings_path)?;
+        }
+    }
+
+    let legacy_agent_path = app_config_file(app, "agent-secrets.json")?;
+    if legacy_agent_path.exists() {
+        let legacy_agent = fs::read_to_string(&legacy_agent_path)
+            .ok()
+            .and_then(|text| serde_json::from_str::<Value>(&text).ok())
+            .and_then(|value| {
+                value
+                    .get("agentZeroToken")
+                    .and_then(Value::as_str)
+                    .map(str::trim)
+                    .map(str::to_string)
+            })
+            .unwrap_or_default();
+        if read_agent_zero_token()?.is_empty() && !legacy_agent.is_empty() {
+            verify_migrated_secret(AGENT_ZERO_TOKEN_ACCOUNT, &legacy_agent)?;
+        }
+        fs::remove_file(&legacy_agent_path).map_err(|error| error.to_string())?;
+    }
+
+    Ok(AppSecrets {
+        openai_key,
+        todoist_token,
+    })
 }
 
 fn normalized_agent_zero_url(value: &str) -> Result<reqwest::Url, String> {
@@ -558,12 +688,8 @@ fn agent_zero_response_text(payload: Value) -> String {
     serde_json::to_string_pretty(&payload).unwrap_or_default()
 }
 
-fn dispatch_to_agent_zero(
-    app: &AppHandle,
-    config: &ProcessingConfig,
-    message: &str,
-) -> Result<String, String> {
-    let token = read_agent_zero_token(app);
+fn dispatch_to_agent_zero(config: &ProcessingConfig, message: &str) -> Result<String, String> {
+    let token = read_agent_zero_token()?;
     if token.is_empty() {
         return Err("Agent Zero needs an A2A token in Atlas settings.".to_string());
     }
@@ -715,19 +841,49 @@ fn log_change(
 }
 
 #[tauri::command]
-fn agent_zero_token_status(app: AppHandle) -> AgentSecretStatus {
-    AgentSecretStatus {
-        configured: !read_agent_zero_token(&app).is_empty(),
+fn load_app_secrets(app: AppHandle) -> Result<AppSecrets, String> {
+    migrate_plaintext_credentials(&app)
+}
+
+fn normalized_secret(value: &str, label: &str) -> Result<String, String> {
+    let value = value.trim();
+    if value.chars().count() > 16_384 || value.chars().any(char::is_control) {
+        return Err(format!("The {label} format is invalid."));
     }
+    Ok(value.to_string())
 }
 
 #[tauri::command]
-fn save_agent_zero_token(app: AppHandle, token: String) -> Result<AgentSecretStatus, String> {
+fn save_app_secrets(openai_key: String, todoist_token: String) -> Result<AppSecrets, String> {
+    let openai_key = normalized_secret(&openai_key, "OpenAI key")?;
+    let todoist_token = normalized_secret(&todoist_token, "Todoist token")?;
+    write_secure_secret(OPENAI_KEY_ACCOUNT, &openai_key)?;
+    write_secure_secret(TODOIST_TOKEN_ACCOUNT, &todoist_token)?;
+    Ok(AppSecrets {
+        openai_key,
+        todoist_token,
+    })
+}
+
+#[tauri::command]
+fn harden_settings_store(app: AppHandle) -> Result<(), String> {
+    harden_private_file(&settings_store_path(&app)?)
+}
+
+#[tauri::command]
+fn agent_zero_token_status() -> Result<AgentSecretStatus, String> {
+    Ok(AgentSecretStatus {
+        configured: !read_agent_zero_token()?.is_empty(),
+    })
+}
+
+#[tauri::command]
+fn save_agent_zero_token(token: String) -> Result<AgentSecretStatus, String> {
     let token = token.trim().trim_start_matches("t-");
     if token.chars().count() > 4096 || token.chars().any(char::is_whitespace) {
         return Err("The Agent Zero token format is invalid.".to_string());
     }
-    write_agent_zero_token(&app, token)?;
+    write_agent_zero_token(token)?;
     Ok(AgentSecretStatus {
         configured: !token.is_empty(),
     })
@@ -741,7 +897,7 @@ fn prepare_processing_job_sync(
     enabled_objects: &[String],
 ) -> Result<Value, String> {
     validate_processing_config(config, processor)?;
-    if processor == "agent-zero" && read_agent_zero_token(app).is_empty() {
+    if processor == "agent-zero" && read_agent_zero_token()?.is_empty() {
         return Err("Finish the Agent Zero connection in Atlas settings first.".to_string());
     }
     let root = configured_agent_vault(app, vault)?;
@@ -763,7 +919,6 @@ fn prepare_processing_job_sync(
         }));
     }
     let result = dispatch_to_agent_zero(
-        app,
         config,
         &agent_zero_inbox_message(&job, &captures, enabled_objects),
     );
@@ -966,9 +1121,12 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             agent_zero_token_status,
             complete_processing_job,
+            harden_settings_store,
+            load_app_secrets,
             log_change,
             prepare_processing_job,
             register_vault,
+            save_app_secrets,
             save_agent_zero_token,
             yt_data
         ])
@@ -988,6 +1146,36 @@ mod tests {
         assert!(normalized_agent_zero_url("http://agents.example.com").is_err());
         assert!(normalized_agent_zero_url("https://user:pass@agents.example.com").is_err());
         assert!(normalized_agent_zero_url("https://agents.example.com?token=secret").is_err());
+    }
+
+    #[test]
+    fn settings_sanitizer_removes_only_plaintext_credentials() {
+        let mut settings = json!({
+            "settings": {
+                "vaultPath": "/tmp/example-atlas",
+                "openaiKey": "private-openai-value",
+                "todoistToken": "private-todoist-value",
+                "theme": "signal"
+            }
+        });
+        assert_eq!(
+            settings_secret(&settings, "openaiKey"),
+            "private-openai-value"
+        );
+        assert!(strip_plaintext_settings_secrets(&mut settings));
+        assert!(settings["settings"].get("openaiKey").is_none());
+        assert!(settings["settings"].get("todoistToken").is_none());
+        assert_eq!(settings["settings"]["vaultPath"], "/tmp/example-atlas");
+        assert_eq!(settings["settings"]["theme"], "signal");
+    }
+
+    #[test]
+    fn secret_validation_trims_and_rejects_control_characters() {
+        assert_eq!(
+            normalized_secret("  usable-token  ", "test").unwrap(),
+            "usable-token"
+        );
+        assert!(normalized_secret("bad\ntoken", "test").is_err());
     }
 
     #[test]

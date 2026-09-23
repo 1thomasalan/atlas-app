@@ -1,7 +1,7 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "Atlas file commands operate only inside the vault the user picked. The Rust shell restores that scope at boot and owns bounded agent leases plus local secret state.",
+  "description": "Atlas file commands operate only inside the vault the user picked. The Rust shell restores that scope at boot, owns bounded agent leases, and stores credentials in the operating system credential manager.",
   "windows": ["main"],
   "permissions": [
     "core:default",

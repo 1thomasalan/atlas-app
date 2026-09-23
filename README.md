@@ -26,7 +26,8 @@ captures, credentials, and settings stay outside it.
 ```text
 atlas-app/       public source code, docs, generic fixtures
 your-vault/      private Markdown data, Obsidian config, Atlas object schemas
-OS app config/   selected vault path, preferences, API credentials, job leases
+OS app config/   selected vault path, preferences, job leases
+OS keychain/     OpenAI, Todoist, and Agent Zero credentials
 ```
 
 The webview receives filesystem access only to the folder selected by the user.
@@ -87,11 +88,12 @@ change-log workflow expects the Atlas folder convention documented in
 
 ## Secrets
 
-Provider credentials and the Agent Zero A2A token are stored in local app
-configuration, never in the vault or this repository. The Agent Zero token is
-kept in a separate `0600` file on Unix systems and is never returned to the
-frontend after saving. General credentials still belong in an OS keychain or
-password manager.
+OpenAI, Todoist, and Agent Zero credentials are stored in the operating
+system's credential manager: macOS Keychain, Windows Credential Manager, or a
+Linux Secret Service. Atlas migrates older plaintext app settings only after
+verifying the secure copy, then removes the plaintext fields and restricts the
+settings file to the current user on Unix. Credentials are never stored in the
+vault or this repository.
 
 ## License
 

@@ -1,5 +1,6 @@
 import { load, Store } from "@tauri-apps/plugin-store";
 import { inTauri, demoStore, seedDemo } from "./demoFs";
+import { hardenSettingsStore, loadAppSecrets, saveAppSecrets, type AppSecrets } from "./secrets";
 import { ThemeId, normTheme } from "./themes";
 
 export type FontScale = "compact" | "comfortable" | "large";
@@ -71,6 +72,7 @@ export function applyAppearance(s: Settings): void {
 }
 
 let store: Store | null = null;
+let secureCache: AppSecrets | null = null;
 
 async function getStore(): Promise<Store> {
   if (!store) store = await load("atlas-settings.json", { autoSave: true, defaults: {} });
@@ -79,14 +81,22 @@ async function getStore(): Promise<Store> {
 
 export async function loadSettings(): Promise<Settings> {
   let saved: Partial<Settings> = {};
+  let secure = { openaiKey: "", todoistToken: "" };
   if (!inTauri) {
     seedDemo();
     saved = demoStore.get<Partial<Settings>>("settings") ?? {};
+    secure = await loadAppSecrets();
   } else {
+    // Migration runs before plugin-store reads the file so its in-memory copy
+    // can never write legacy plaintext credentials back to disk.
+    secure = await loadAppSecrets();
     const s = await getStore();
     saved = (await s.get<Partial<Settings>>("settings")) ?? {};
   }
+  secureCache = { ...secure };
   const merged = { ...DEFAULTS, ...saved };
+  merged.openaiKey = secure.openaiKey;
+  merged.todoistToken = secure.todoistToken;
   merged.theme = normTheme(merged.theme as unknown as string);   // migrate legacy light/dark
   if (!["codex", "agent-zero", "hybrid"].includes(merged.processingMode)) {
     merged.processingMode = "codex";
@@ -96,8 +106,21 @@ export async function loadSettings(): Promise<Settings> {
 }
 
 export async function saveSettings(settings: Settings): Promise<void> {
-  if (!inTauri) { demoStore.set("settings", settings); return; }
+  const nextSecrets = {
+    openaiKey: settings.openaiKey,
+    todoistToken: settings.todoistToken,
+  };
+  if (!secureCache ||
+      secureCache.openaiKey !== nextSecrets.openaiKey ||
+      secureCache.todoistToken !== nextSecrets.todoistToken) {
+    secureCache = await saveAppSecrets(nextSecrets);
+  }
+  const persisted: Partial<Settings> = { ...settings };
+  delete persisted.openaiKey;
+  delete persisted.todoistToken;
+  if (!inTauri) { demoStore.set("settings", persisted); return; }
   const s = await getStore();
-  await s.set("settings", settings);
+  await s.set("settings", persisted);
   await s.save();
+  await hardenSettingsStore();
 }

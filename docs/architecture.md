@@ -18,7 +18,7 @@ desktop security model.
 
 - grants Tauri filesystem scope only to the selected vault;
 - restores the saved scope at launch;
-- stores local secret and lease state outside the vault;
+- stores credentials in the OS credential manager and lease state outside the vault;
 - runs YouTube requests that cannot originate from the webview;
 - reserves bounded Capture batches for Codex or Agent Zero;
 - sends Agent Zero A2A requests and saves responses to Review;

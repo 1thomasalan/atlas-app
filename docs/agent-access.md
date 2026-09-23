@@ -29,7 +29,7 @@ Codex handoffs also carry the inbox aging rule: items older than seven days may 
 
 The processing mode can be `Codex`, `Agent Zero`, or `Hybrid`. Hybrid mode presents both processors at dispatch time; it does not send the same Capture to both.
 
-Agent Zero settings contain an instance URL, optional project, and A2A token. The token is written to local secret state and is not stored in the vault, returned by the settings API, or committed to Git.
+Agent Zero settings contain an instance URL, optional project, and A2A token. The token is written to the operating system credential manager and is not stored in the vault, returned by the settings API, or committed to Git.
 
 ## Future Inbound Scopes
 
