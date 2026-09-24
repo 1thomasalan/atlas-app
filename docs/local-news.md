@@ -53,6 +53,9 @@ The archive folder is configurable. It must remain inside the connected vault.
           "url": "https://example.com/direct-source",
           "date": "YYYY-MM-DD",
           "time": "HH:MM",
+          "venue": "Optional verified event venue",
+          "photoOpportunity": "Optional documentary photo-story angle",
+          "logistics": "Optional access and camera-planning notes",
           "image": "https://example.com/source-image.jpg",
           "imageAi": false,
           "imageGenerated": false
@@ -68,7 +71,10 @@ The archive folder is configurable. It must remain inside the connected vault.
 
 `edition` is `morning` or `evening`. Every item needs its own direct HTTP(S)
 source URL. Dates and times must be exact when they are material. `weather` may
-be null and `image`, `time`, and `dek` may be omitted. `imageAi` identifies
+be null and `image`, `time`, `venue`, `photoOpportunity`, `logistics`, and `dek`
+may be omitted. The three event fields support the Festival & Photo Story Watch:
+verified place, a photographer-facing visual angle, and practical access notes.
+`imageAi` identifies
 model-generated editorial artwork; `imageGenerated` also covers the offline
 procedural fallback. Atlas labels both so generated artwork is never presented
 as source photography. `notes` contains material verification gaps, not routine
@@ -79,6 +85,8 @@ editorial narration.
 - Prefer primary sources and reputable local reporting.
 - Deduplicate the same underlying event.
 - Never invent a source URL, date, time, or unstable fact.
+- Include 2-3 verified festivals or documentary photo opportunities in the
+  next 45 days when available, with date, venue, story angle, and logistics.
 - Omit unverifiable items or record a material gap in `notes`.
 - Write the Markdown archive before replacing `current.json`.
 - Keep credentials outside the vault and repository.

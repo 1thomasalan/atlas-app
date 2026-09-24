@@ -198,6 +198,13 @@ export function NewsCard({ item, root }: { item: BriefItem; root: string }) {
       )}
       <h3 className="news-card-title"><a href={item.url} onClick={open}>{item.title}</a></h3>
       {item.summary && <p className="news-card-why"><em>Why it matters:</em> {item.summary}</p>}
+      {(item.venue || item.photoOpportunity || item.logistics) && (
+        <div className="news-card-field-notes">
+          {item.venue && <p><strong>Venue</strong><span>{item.venue}</span></p>}
+          {item.photoOpportunity && <p className="news-card-photo-angle"><strong>Photo story angle</strong><span>{item.photoOpportunity}</span></p>}
+          {item.logistics && <p><strong>Plan ahead</strong><span>{item.logistics}</span></p>}
+        </div>
+      )}
       <a className="news-card-src" href={item.url} onClick={open}>
         {item.source || hostOf(item.url) || "source"} ↗
         {item.date ? ` · ${item.date}` : ""}{item.time ? ` · ${item.time}` : ""}

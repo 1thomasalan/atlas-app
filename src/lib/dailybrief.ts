@@ -20,6 +20,9 @@ export interface BriefItem extends BriefStory {
   imageAi?: boolean;  // painted by an image model, never presented as source photography
   imageGenerated?: boolean; // any generated fallback, including the offline procedural fallback
   time?: string;      // exact local time when a local item is time-sensitive
+  venue?: string;     // verified event location for local-news listings
+  photoOpportunity?: string; // documentary/photo-story angle, not source reporting
+  logistics?: string; // access, crowd, transit, ticket, or camera notes
 }
 export interface BriefSection { title: string; items: BriefItem[]; }
 export interface DailyBrief {

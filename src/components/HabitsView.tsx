@@ -42,7 +42,12 @@ export default function HabitsView(props: {
     () => Array.from({ length: HISTORY_DAYS }, (_, i) => addDays(today, -i)),
     [today],
   );
-  const week = useMemo(() => datesDesc.slice(0, 7).reverse(), [datesDesc]);
+  const [selectedDate, setSelectedDate] = useState(today);
+  const week = useMemo(() => {
+    const selectedIndex = Math.max(0, datesDesc.indexOf(selectedDate));
+    const weekStart = Math.floor(selectedIndex / 7) * 7;
+    return datesDesc.slice(weekStart, weekStart + 7).reverse();
+  }, [datesDesc, selectedDate]);
 
   const [logs, setLogs] = useState<Map<string, DayLog>>(new Map());
   const [weight, setWeight] = useState<Reading[]>([]);
@@ -68,16 +73,21 @@ export default function HabitsView(props: {
   }, [profile, datesDesc]);
   useEffect(() => { reload(); }, [reload]);
 
-  const todayLog = logs.get(today) ?? new Map();
-  const doneCount = habits.filter((h) => todayLog.get(h.name)?.done).length;
+  const selectedLog = logs.get(selectedDate) ?? new Map();
+  const doneCount = habits.filter((h) => selectedLog.get(h.name)?.done).length;
+  const selectedDateLabel = selectedDate === today
+    ? "Today"
+    : new Date(`${selectedDate}T12:00:00`).toLocaleDateString(undefined, {
+      weekday: "long", month: "short", day: "numeric",
+    });
 
-  const tick = async (h: HabitDef, done: boolean, minutes?: number) => {
-    const path = await setHabit(profile, today, h.name, done, minutes);
+  const tick = async (h: HabitDef, done: boolean, minutes?: number, date = selectedDate) => {
+    const path = await setHabit(profile, date, h.name, done, minutes);
     setLogs((cur) => {
       const next = new Map(cur);
-      const day = new Map(next.get(today) ?? []);
+      const day = new Map(next.get(date) ?? []);
       day.set(h.name, { done, minutes });
-      next.set(today, day);
+      next.set(date, day);
       return next;
     });
     props.onRefreshObject(path);
@@ -127,19 +137,38 @@ export default function HabitsView(props: {
       <div className="page-head browser-head">
         <div>
           <span className="eyebrow">
-            <span style={{ color: habitType.color }}>◎</span> {doneCount} of {habits.length} today
+            <span style={{ color: habitType.color }}>◎</span> {doneCount} of {habits.length} / {selectedDateLabel}
           </span>
           <h1 className="page-title">Habits</h1>
         </div>
         <ProgressRing done={doneCount} total={habits.length} />
       </div>
 
-      <WeekStrip week={week} today={today} logs={logs} habits={habits}
-        onPick={(d) => props.onNavigate({ kind: "calendar", date: d })} />
+      <WeekStrip week={week} today={today} selected={selectedDate} logs={logs} habits={habits}
+        onPick={setSelectedDate} />
 
       <div className="habits-grid">
       <section className="cal-section">
-        <h3 className="eyebrow">Today</h3>
+        <div className="habit-day-head">
+          <h3 className="eyebrow">{selectedDateLabel}</h3>
+          <div className="habit-day-actions">
+            {selectedDate !== today && (
+              <button className="quick-chip" onClick={() => setSelectedDate(today)}>Today</button>
+            )}
+            <input
+              className="input habit-date-input"
+              type="date"
+              min={datesDesc[datesDesc.length - 1]}
+              max={today}
+              value={selectedDate}
+              aria-label="Habit date"
+              onChange={(event) => event.target.value && setSelectedDate(event.target.value)}
+            />
+            <button className="quick-chip" onClick={() => props.onNavigate({ kind: "calendar", date: selectedDate })}>
+              Open daily note
+            </button>
+          </div>
+        </div>
         {habits.length === 0 && (
           <div className="cal-empty">
             <strong>No habits yet.</strong>
@@ -151,13 +180,14 @@ export default function HabitsView(props: {
           <HabitRow
             key={h.path}
             habit={h}
-            entry={todayLog.get(h.name)}
+            entry={selectedLog.get(h.name)}
             streak={streakFor(datesDesc, logs, h.name)}
             week={week}
             logs={logs}
             today={today}
             onTick={(done) => tick(h, done)}
-            onStart={() => setTimer({ habit: h, total: h.minutes * 60, left: h.minutes * 60, running: true })}
+            allowTimer={selectedDate === today}
+            onStart={() => setTimer({ habit: h, date: selectedDate, total: h.minutes * 60, left: h.minutes * 60, running: true })}
             onOpen={() => props.onNavigate({ kind: "object", path: h.path })}
           />
         ))}
@@ -211,8 +241,8 @@ export default function HabitsView(props: {
           setState={setTimer}
           onFinish={async (minutes) => {
             chime();
-            await tick(timer.habit, true, minutes);
-            props.toast(`${timer.habit.name}: ${minutes}m — logged to today's note`);
+            await tick(timer.habit, true, minutes, timer.date);
+            props.toast(`${timer.habit.name}: ${minutes}m — logged to ${timer.date === today ? "today" : timer.date}`);
           }}
         />
       )}
@@ -222,11 +252,11 @@ export default function HabitsView(props: {
 
 /* ---------- pieces ---------- */
 
-interface TimerState { habit: HabitDef; total: number; left: number; running: boolean; }
+interface TimerState { habit: HabitDef; date: string; total: number; left: number; running: boolean; }
 
 
 function WeekStrip(props: {
-  week: string[]; today: string; logs: Map<string, DayLog>; habits: HabitDef[];
+  week: string[]; today: string; selected: string; logs: Map<string, DayLog>; habits: HabitDef[];
   onPick: (date: string) => void;
 }) {
   if (props.habits.length === 0) return null;
@@ -239,7 +269,13 @@ function WeekStrip(props: {
         const dayNum = Number(d.slice(8));
         const wd = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"][new Date(d + "T12:00").getDay()];
         return (
-          <button key={d} className={`week-day ${d === props.today ? "today" : ""}`} onClick={() => props.onPick(d)} title={`${done}/${props.habits.length}`}>
+          <button
+            key={d}
+            className={`week-day ${d === props.today ? "today" : ""} ${d === props.selected ? "selected" : ""}`}
+            onClick={() => props.onPick(d)}
+            title={`Edit ${d}: ${done}/${props.habits.length} complete`}
+            aria-pressed={d === props.selected}
+          >
             <span className="week-day-wd">{wd}</span>
             <span className="week-day-num">{dayNum}</span>
             <span className="week-day-bar"><span style={{ width: `${Math.round(pct * 100)}%` }} /></span>
@@ -257,6 +293,7 @@ function HabitRow(props: {
   week: string[];
   logs: Map<string, DayLog>;
   today: string;
+  allowTimer: boolean;
   onTick: (done: boolean) => void;
   onStart: () => void;
   onOpen: () => void;
@@ -281,7 +318,7 @@ function HabitRow(props: {
         })}
       </span>
       {props.streak > 1 && <span className="habit-streak">{props.streak}d</span>}
-      {habit.kind === "timer" && !done && (
+      {habit.kind === "timer" && !done && props.allowTimer && (
         <button className="btn habit-start" onClick={props.onStart}>Start</button>
       )}
     </div>

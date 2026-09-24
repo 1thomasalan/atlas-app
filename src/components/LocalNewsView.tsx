@@ -129,7 +129,7 @@ export default function LocalNewsView(props: {
 
             {edition.events.length > 0 && (
               <section className="news-section local-events">
-                <h2 className="news-section-head">On the Calendar</h2>
+                <h2 className="news-section-head">Festival & Photo Story Watch</h2>
                 <div className="news-cards">
                   {edition.events.map((item, index) => (
                     <NewsCard key={`${item.url}-${index}`} item={item} root={props.profile.root} />
