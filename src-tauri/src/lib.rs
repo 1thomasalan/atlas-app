@@ -871,6 +871,13 @@ fn harden_settings_store(app: AppHandle) -> Result<(), String> {
 }
 
 #[tauri::command]
+fn print_webview(window: tauri::WebviewWindow) -> Result<(), String> {
+    window
+        .print()
+        .map_err(|error| format!("Atlas could not open the PDF print sheet: {error}"))
+}
+
+#[tauri::command]
 fn agent_zero_token_status() -> Result<AgentSecretStatus, String> {
     Ok(AgentSecretStatus {
         configured: !read_agent_zero_token()?.is_empty(),
@@ -1124,6 +1131,7 @@ pub fn run() {
             harden_settings_store,
             load_app_secrets,
             log_change,
+            print_webview,
             prepare_processing_job,
             register_vault,
             save_app_secrets,

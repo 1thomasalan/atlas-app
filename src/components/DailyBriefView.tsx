@@ -6,6 +6,8 @@ import { coverSrc, hostOf } from "../lib/unfurl";
 import { openExternal } from "../lib/open";
 import { Weather } from "../lib/weather";
 import { DailyBrief, BriefItem, BriefSection, loadBrief } from "../lib/dailybrief";
+import { sharePublicationPdf } from "../lib/print";
+import Icon from "./Icon";
 
 /** The Daily Brief broadsheet: weather + local news + the user's topics, fetched
  *  once a day (App owns generation; this view typesets the cached result as a
@@ -29,6 +31,7 @@ export default function DailyBriefView(props: {
 }) {
   const [brief, setBrief] = useState<DailyBrief | null>(null);
   const [loading, setLoading] = useState(true);
+  const [printError, setPrintError] = useState("");
 
   useEffect(() => {
     let alive = true;
@@ -59,10 +62,21 @@ export default function DailyBriefView(props: {
       <div className="paper-inner">
         <div className="paper-toolbar">
           {props.busy && <span className="paper-fetching"><span className="brief-dot" /> {props.status || "Fetching today's news…"}</span>}
+          {brief && (
+            <button className="paper-btn paper-btn-secondary" title="Open the system PDF share sheet"
+              onClick={() => {
+                setPrintError("");
+                sharePublicationPdf(`${name} - ${dateStr}`).catch((error) => setPrintError(error instanceof Error ? error.message : "PDF sharing failed."));
+              }}>
+              <Icon name="share" size={14} /> Share PDF
+            </button>
+          )}
           <button className="paper-btn" disabled={props.busy} onClick={props.onRefresh}>
-            {props.busy ? "Fetching…" : brief ? "↻ Refresh" : "Fetch today's brief"}
+            {!props.busy && <Icon name="sync" size={14} />}
+            {props.busy ? "Fetching…" : brief ? "Refresh" : "Fetch today's brief"}
           </button>
         </div>
+        {printError && <p className="paper-action-error">{printError}</p>}
 
         <header className="paper-masthead">
           <h1 className="paper-name">{name}</h1>
@@ -125,16 +139,47 @@ export default function DailyBriefView(props: {
 }
 
 export function WeatherStrip({ w }: { w: Weather }) {
+  const condition = w.current.label.toLowerCase();
+  const tone = /thunder|storm/.test(condition) ? "storm"
+    : /rain|drizzle|shower/.test(condition) ? "rain"
+      : /snow|freez/.test(condition) ? "snow"
+        : /clear|sun/.test(condition) ? "clear"
+          : "cloud";
+  const symbol = tone === "storm" ? "⛈️" : tone === "rain" ? "🌧️"
+    : tone === "snow" ? "❄️" : tone === "clear" ? "☀️" : "☁️";
   return (
-    <div className="news-weather">
-      <span className="news-weather-emoji">{w.current.emoji}</span>
-      <span className="news-weather-loc">{w.location}</span>
-      <span className="news-weather-temp">{w.current.tempC}°C / {w.current.tempF}°F</span>
-      <span>{w.current.label}</span>
-      <span>High {w.today.hiC}° · Low {w.today.loC}°</span>
-      {w.today.precipPct != null && <span>{w.today.precipPct}% precip</span>}
-      <span>Wind {w.current.windKph} km/h</span>
-    </div>
+    <section className={`news-weather weather-${tone}`} aria-label={`Weather for ${w.location}`}>
+      <div className="news-weather-primary">
+        <span className="news-weather-emoji" aria-hidden="true">{symbol}</span>
+        <div className="news-weather-now">
+          <span className="news-weather-kicker">Current conditions</span>
+          <strong className="news-weather-temp">{w.current.tempC}°C</strong>
+          <span className="news-weather-fahrenheit">{w.current.tempF}°F</span>
+        </div>
+        <div className="news-weather-place">
+          <strong className="news-weather-loc">{w.location}</strong>
+          <span>{w.current.label}</span>
+          <span className="news-weather-outlook">Today: {w.today.label}</span>
+        </div>
+      </div>
+      <div className="news-weather-metrics">
+        <WeatherMetric label="High / Low" value={`${w.today.hiC}° / ${w.today.loC}°`} detail={`${w.today.hiF}°F / ${w.today.loF}°F`} />
+        <WeatherMetric label="Feels like" value={`${w.current.feelsC}°C`} detail={`${w.current.feelsF}°F`} />
+        <WeatherMetric label="Rain" value={w.today.precipPct == null ? "--" : `${w.today.precipPct}%`} detail="chance today" />
+        <WeatherMetric label="Humidity" value={`${w.current.humidity}%`} detail="current" />
+        <WeatherMetric label="Wind" value={`${w.current.windKph}`} detail="km/h" />
+      </div>
+    </section>
+  );
+}
+
+function WeatherMetric({ label, value, detail }: { label: string; value: string; detail: string }) {
+  return (
+    <span className="news-weather-metric">
+      <span className="news-weather-metric-label">{label}</span>
+      <strong>{value}</strong>
+      <span>{detail}</span>
+    </span>
   );
 }
 
@@ -147,7 +192,8 @@ export function NewsCard({ item, root }: { item: BriefItem; root: string }) {
         <a className="news-card-media" href={item.url} onClick={open} title="Open source ↗">
           <img src={src} alt="" loading="lazy"
             onError={(e) => { (e.currentTarget.parentElement as HTMLElement).style.display = "none"; }} />
-          {item.imageAi && <span className="ai-badge">AI generated</span>}
+          {item.imageAi && <span className="ai-badge">AI-generated</span>}
+          {!item.imageAi && item.imageGenerated && <span className="ai-badge">Generated artwork</span>}
         </a>
       )}
       <h3 className="news-card-title"><a href={item.url} onClick={open}>{item.title}</a></h3>

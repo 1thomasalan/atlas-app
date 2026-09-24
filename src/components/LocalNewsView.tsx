@@ -3,7 +3,9 @@ import { AtlasProfile } from "../lib/atlasProfile";
 import { LocalNewsEdition, loadLocalNews } from "../lib/localnews";
 import { Route } from "../lib/nav";
 import { Settings } from "../lib/settings";
+import { sharePublicationPdf } from "../lib/print";
 import { NewsCard, WeatherStrip } from "./DailyBriefView";
+import Icon from "./Icon";
 
 const timezoneName = (): string => {
   try {
@@ -26,6 +28,7 @@ export default function LocalNewsView(props: {
   const [edition, setEdition] = useState<LocalNewsEdition | null>(null);
   const [loading, setLoading] = useState(true);
   const [reload, setReload] = useState(0);
+  const [printError, setPrintError] = useState("");
 
   useEffect(() => {
     let alive = true;
@@ -58,13 +61,24 @@ export default function LocalNewsView(props: {
               <span className="brief-dot" /> {props.status || "Refreshing local news..."}
             </span>
           )}
+          {edition && (
+            <button className="paper-btn paper-btn-secondary" title="Open the system PDF share sheet"
+              onClick={() => {
+                setPrintError("");
+                sharePublicationPdf(`${name} - ${edition.edition} - ${date}`).catch((error) => setPrintError(error instanceof Error ? error.message : "PDF sharing failed."));
+              }}>
+              <Icon name="share" size={14} /> Share PDF
+            </button>
+          )}
           <button className="paper-btn paper-btn-secondary" disabled={props.busy} onClick={() => setReload((value) => value + 1)}>
-            Reload from disk
+            <Icon name="sync" size={14} /> Reload from disk
           </button>
           <button className="paper-btn" disabled={props.busy} onClick={props.onRefresh}>
+            {!props.busy && <Icon name="sync" size={14} />}
             {props.busy ? "Refreshing..." : edition ? "Refresh edition" : "Create current edition"}
           </button>
         </div>
+        {printError && <p className="paper-action-error">{printError}</p>}
 
         <header className="paper-masthead">
           <h1 className="paper-name">{name}</h1>

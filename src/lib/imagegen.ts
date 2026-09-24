@@ -73,8 +73,9 @@ export async function aiStoryImage(key: string, title: string, summary: string):
   const prompt =
     `Editorial cover illustration for a news item titled "${title}". ` +
     (summary ? `Context: ${summary.slice(0, 300)}. ` : "") +
-    "Tasteful, modern editorial style — abstract or lightly illustrative, with soft gradients and " +
-    "clean shapes that evoke the subject. Absolutely no text, words, letters, numbers, logos, or watermarks.";
+    "Tasteful modern editorial illustration, abstract or lightly illustrative, composed as a horizontal news image. " +
+    "It must read as conceptual artwork rather than documentary photography and must not imply that it depicts the actual event. " +
+    "Use clean forms and a varied editorial palette. Absolutely no text, words, letters, numbers, logos, signatures, or watermarks.";
   return openaiImage(key, prompt);
 }
 

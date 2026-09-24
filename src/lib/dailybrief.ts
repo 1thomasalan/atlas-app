@@ -17,7 +17,8 @@ import { aiBriefLead } from "./assist";
 
 export interface BriefItem extends BriefStory {
   image?: string;     // source og:image URL, a vault path, or a data URL
-  imageAi?: boolean;  // generated → the view shows a small "AI generated" badge
+  imageAi?: boolean;  // painted by an image model, never presented as source photography
+  imageGenerated?: boolean; // any generated fallback, including the offline procedural fallback
   time?: string;      // exact local time when a local item is time-sensitive
 }
 export interface BriefSection { title: string; items: BriefItem[]; }
@@ -58,10 +59,9 @@ function parseTopics(raw: string): string[] {
   }).slice(0, 6);
 }
 
-/** A per-brief AI-image budget, so a 6-topic run can't fan out into 20+ paid
- *  image generations. Beyond it — or on any failure — we use the free procedural
- *  cover, so a card is never silently left image-less. */
-interface PhotoBudget { ai: number }
+/** A shared counter lets a producer opt into one AI attempt for every missing
+ *  source image while keeping concurrent sections from exceeding that total. */
+export interface StoryImageBudget { ai: number }
 
 /** Bounded-concurrency map (keeps photo work from stampeding the network). */
 async function mapPool<T, R>(items: T[], limit: number, fn: (item: T) => Promise<R>): Promise<R[]> {
@@ -75,17 +75,18 @@ async function mapPool<T, R>(items: T[], limit: number, fn: (item: T) => Promise
 
 /** Resolve a photo for a story: the article's own image first, else a generated
  *  illustration (AI in the app within budget, a procedural cover otherwise),
- *  always flagged as AI so the view can badge it. */
-async function resolvePhoto(profile: AtlasProfile, settings: Settings, story: BriefStory, budget: PhotoBudget): Promise<{ image?: string; imageAi?: boolean }> {
+ *  always labeled by its actual origin so it cannot be mistaken for source photography. */
+async function resolvePhoto(profile: AtlasProfile, settings: Settings, story: BriefStory, budget: StoryImageBudget): Promise<Pick<BriefItem, "image" | "imageAi" | "imageGenerated">> {
   try {
     const u = await unfurl(story.url);
-    if (u.image && /^https?:\/\//.test(u.image)) return { image: u.image, imageAi: false };
+    if (u.image && /^https?:\/\//.test(u.image)) return { image: u.image, imageAi: false, imageGenerated: false };
   } catch { /* no source image — fall through to a generated one */ }
   let gen: GenImage | null = null;
+  let imageAi = false;
   const key = settings.openaiKey.trim();
   if (inTauri && key && budget.ai > 0) {
     budget.ai--;
-    try { gen = await aiStoryImage(key, story.title, story.summary); }
+    try { gen = await aiStoryImage(key, story.title, story.summary); imageAi = true; }
     catch { gen = null; } // rate-limited / failed → fall back, don't drop the card
   }
   if (!gen) gen = proceduralStoryCover(story.title);
@@ -93,11 +94,16 @@ async function resolvePhoto(profile: AtlasProfile, settings: Settings, story: Br
     // A unique stem keeps two same-titled stories from racing onto the same file.
     const stem = `${story.title}-${crypto.randomUUID().slice(0, 8)}`;
     const stored = await savePhotoFromImage(profile, ".atlas/brief-assets", stem, { b64: gen.b64, mime: gen.mime, name: story.title });
-    return { image: stored, imageAi: true };
+    return { image: stored, imageAi, imageGenerated: true };
   } catch { return {}; }
 }
 
-async function withPhotos(profile: AtlasProfile, settings: Settings, stories: BriefStory[], budget: PhotoBudget): Promise<BriefItem[]> {
+export async function addStoryImages<T extends BriefStory>(
+  profile: AtlasProfile,
+  settings: Settings,
+  stories: T[],
+  budget: StoryImageBudget,
+): Promise<(T & Pick<BriefItem, "image" | "imageAi" | "imageGenerated">)[]> {
   return mapPool(stories, 3, async (s) => ({ ...s, ...(await resolvePhoto(profile, settings, s, budget)) }));
 }
 
@@ -125,13 +131,14 @@ export async function generateDailyBrief(
   const [localStories, topicResults] = await Promise.all([localP, Promise.all(topicP)]);
 
   opts.onProgress?.("Finding photos…");
-  const budget: PhotoBudget = { ai: 10 };
+  const imageCount = localStories.length + topicResults.reduce((sum, result) => sum + result.s.length, 0);
+  const budget: StoryImageBudget = { ai: imageCount };
   const local: BriefSection | null = localStories.length
-    ? { title: `Local — ${settings.briefLocation.trim()}`, items: await withPhotos(profile, settings, localStories, budget) }
+    ? { title: `Local — ${settings.briefLocation.trim()}`, items: await addStoryImages(profile, settings, localStories, budget) }
     : null;
   const sections: BriefSection[] = [];
   for (const { t, s } of topicResults) {
-    if (s.length) sections.push({ title: t, items: await withPhotos(profile, settings, s, budget) });
+    if (s.length) sections.push({ title: t, items: await addStoryImages(profile, settings, s, budget) });
   }
 
   if (!local && !sections.length && !weather) {

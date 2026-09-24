@@ -53,7 +53,9 @@ The archive folder is configurable. It must remain inside the connected vault.
           "url": "https://example.com/direct-source",
           "date": "YYYY-MM-DD",
           "time": "HH:MM",
-          "image": "https://example.com/source-image.jpg"
+          "image": "https://example.com/source-image.jpg",
+          "imageAi": false,
+          "imageGenerated": false
         }
       ]
     }
@@ -66,8 +68,11 @@ The archive folder is configurable. It must remain inside the connected vault.
 
 `edition` is `morning` or `evening`. Every item needs its own direct HTTP(S)
 source URL. Dates and times must be exact when they are material. `weather` may
-be null and `image`, `time`, and `dek` may be omitted. `notes` contains material
-verification gaps, not routine editorial narration.
+be null and `image`, `time`, and `dek` may be omitted. `imageAi` identifies
+model-generated editorial artwork; `imageGenerated` also covers the offline
+procedural fallback. Atlas labels both so generated artwork is never presented
+as source photography. `notes` contains material verification gaps, not routine
+editorial narration.
 
 ## Producer Rules
 

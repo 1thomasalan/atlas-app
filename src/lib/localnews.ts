@@ -1,9 +1,9 @@
 import { AtlasProfile } from "./atlasProfile";
 import { todayStamp } from "./daily";
-import { BriefItem } from "./dailybrief";
+import { addStoryImages, BriefItem, StoryImageBudget } from "./dailybrief";
 import { webSearchText } from "./dailynews";
 import { Settings } from "./settings";
-import { hostOf, unfurl } from "./unfurl";
+import { hostOf } from "./unfurl";
 import { ensureDir, join, readFile, writeFile } from "./vault";
 import { getWeather, Weather } from "./weather";
 
@@ -106,17 +106,6 @@ function normalizeItems(raw: RawItem[] | undefined, fallbackSection: string): Lo
     });
   }
   return out;
-}
-
-async function addSourceImages(items: LocalNewsItem[]): Promise<LocalNewsItem[]> {
-  return Promise.all(items.map(async (item) => {
-    try {
-      const data = await unfurl(item.url);
-      return data.image && /^https?:\/\//.test(data.image) ? { ...item, image: data.image } : item;
-    } catch {
-      return item;
-    }
-  }));
 }
 
 function groupSections(items: LocalNewsItem[]): LocalNewsSection[] {
@@ -246,10 +235,11 @@ export async function generateLocalNews(
   const events = normalizeItems(raw.events, "Calendar");
   if (!stories.length) throw new Error("No verified local stories came back. The previous edition was kept.");
 
-  opts.onProgress?.("Checking source images...");
+  opts.onProgress?.("Finding source photos and creating missing artwork...");
+  const imageBudget: StoryImageBudget = { ai: stories.length + events.length };
   const [picturedStories, picturedEvents] = await Promise.all([
-    addSourceImages(stories),
-    addSourceImages(events),
+    addStoryImages(profile, settings, stories, imageBudget),
+    addStoryImages(profile, settings, events, imageBudget),
   ]);
   notes.push(...(raw.verificationNotes ?? []).map(String).map((note) => note.trim()).filter(Boolean));
 

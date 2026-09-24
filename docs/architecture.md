@@ -37,6 +37,11 @@ human-readable Markdown mirror in the vault folder selected in Settings. The
 React view only renders that contract; native generation and optional external
 agents are producers of the same format.
 
+Daily Brief and Local News share one visual-enrichment path: source-page images
+are preferred, missing images receive labeled generated artwork, and all
+publication views use a common print stylesheet plus the native Tauri print
+sheet for PDF export and sharing.
+
 The complete Atlas workflow uses:
 
 ```text

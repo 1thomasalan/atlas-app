@@ -18,6 +18,8 @@ captures, credentials, and settings stay outside it.
   reviews, habits, local briefs, health imports, and a Markdown editor.
 - Generates an on-demand, source-linked Local News edition with independent
   location, source, editorial-focus, and vault archive settings.
+- Fills missing story art with clearly labeled editorial illustrations and
+  opens a native, print-ready PDF share sheet for Local News and Daily Brief.
 - Stores custom object schemas in the connected vault at `.atlas/types.json`.
 - Uses Object Studio to turn a plain-language object idea into a Capture
   request and a review-gated setup proposal.
