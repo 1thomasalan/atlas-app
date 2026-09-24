@@ -85,9 +85,10 @@ function normalize(raw: RawStory[]): BriefStory[] {
   return out;
 }
 
-/** One web-search request → normalized stories. Tries the GA tool name and
- *  falls back to the preview name for older keys. */
-async function webSearch(key: string, prompt: string): Promise<BriefStory[]> {
+/** One web-search request returning model text. Tries the GA tool name and
+ *  falls back to the preview name for older keys. Structured callers parse
+ *  their own response contract. */
+export async function webSearchText(key: string, prompt: string, maxOutputTokens = 2000): Promise<string> {
   if (!inTauri) throw new Error("Live news needs the desktop app (web requests are blocked in the browser demo).");
   // Try the user's chosen (web-search-capable) model first, then gpt-4o as a
   // dependable floor; each with the GA tool name then the legacy preview name.
@@ -100,7 +101,7 @@ async function webSearch(key: string, prompt: string): Promise<BriefStory[]> {
         res = await doFetch(RESPONSES, {
           method: "POST",
           headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
-          body: JSON.stringify({ model, tools: [{ type: tool }], input: prompt, max_output_tokens: tokenBudget(2000) }),
+          body: JSON.stringify({ model, tools: [{ type: tool }], input: prompt, max_output_tokens: tokenBudget(maxOutputTokens) }),
         });
       } catch (e) { lastErr = e instanceof Error ? e.message : "network error"; continue; }
       const j = (await res.json().catch(() => ({}))) as RawResp;
@@ -109,10 +110,16 @@ async function webSearch(key: string, prompt: string): Promise<BriefStory[]> {
         if (/web_search|tool|not supported|unsupported|unknown|model/i.test(lastErr)) continue; // tool/model unsupported — try next combo
         throw new Error(lastErr);
       }
-      return normalize(parseStories(extractText(j)));
+      const text = extractText(j).trim();
+      if (!text) { lastErr = "web search returned no text"; continue; }
+      return text;
     }
   }
   throw new Error(lastErr || "web search failed");
+}
+
+async function webSearch(key: string, prompt: string): Promise<BriefStory[]> {
+  return normalize(parseStories(await webSearchText(key, prompt)));
 }
 
 const SHARED =

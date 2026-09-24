@@ -18,6 +18,7 @@ import { aiBriefLead } from "./assist";
 export interface BriefItem extends BriefStory {
   image?: string;     // source og:image URL, a vault path, or a data URL
   imageAi?: boolean;  // generated → the view shows a small "AI generated" badge
+  time?: string;      // exact local time when a local item is time-sensitive
 }
 export interface BriefSection { title: string; items: BriefItem[]; }
 export interface DailyBrief {

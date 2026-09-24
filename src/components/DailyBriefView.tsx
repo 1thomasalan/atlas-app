@@ -124,7 +124,7 @@ export default function DailyBriefView(props: {
   );
 }
 
-function WeatherStrip({ w }: { w: Weather }) {
+export function WeatherStrip({ w }: { w: Weather }) {
   return (
     <div className="news-weather">
       <span className="news-weather-emoji">{w.current.emoji}</span>
@@ -138,7 +138,7 @@ function WeatherStrip({ w }: { w: Weather }) {
   );
 }
 
-function NewsCard({ item, root }: { item: BriefItem; root: string }) {
+export function NewsCard({ item, root }: { item: BriefItem; root: string }) {
   const src = coverSrc(root, item.image);
   const open = (e: MouseEvent) => { e.preventDefault(); openExternal(item.url); };
   return (
@@ -153,7 +153,8 @@ function NewsCard({ item, root }: { item: BriefItem; root: string }) {
       <h3 className="news-card-title"><a href={item.url} onClick={open}>{item.title}</a></h3>
       {item.summary && <p className="news-card-why"><em>Why it matters:</em> {item.summary}</p>}
       <a className="news-card-src" href={item.url} onClick={open}>
-        {item.source || hostOf(item.url) || "source"} ↗{item.date ? ` · ${item.date}` : ""}
+        {item.source || hostOf(item.url) || "source"} ↗
+        {item.date ? ` · ${item.date}` : ""}{item.time ? ` · ${item.time}` : ""}
       </a>
     </article>
   );

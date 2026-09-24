@@ -325,6 +325,57 @@ export default function SettingsView(props: {
       </section>
 
       <section className="settings-section">
+        <h3>Local News</h3>
+        <p className="hint">
+          A source-linked local edition you can refresh on demand. Atlas researches the current
+          edition with your OpenAI key, caches the live view in <code>.atlas/local-news</code>, and
+          saves a readable Markdown copy inside your vault.
+        </p>
+        <div className="field">
+          <label className="eyebrow">Local News</label>
+          <div className="seg">
+            {([["on", true], ["off", false]] as const).map(([label, val]) => (
+              <button key={label} className={`seg-btn ${s.localNews === val ? "on" : ""}`}
+                onClick={() => set("localNews", val)}>{label}</button>
+            ))}
+          </div>
+        </div>
+        {s.localNews && (
+          <>
+            <div className="field" style={{ marginTop: 14 }}>
+              <label className="eyebrow">Publication name</label>
+              <input className="input" value={s.localNewsName}
+                onChange={(e) => set("localNewsName", e.target.value)} placeholder="Local News" />
+            </div>
+            <div className="field" style={{ marginTop: 14 }}>
+              <label className="eyebrow">Coverage area</label>
+              <input className="input" value={s.localNewsLocation}
+                onChange={(e) => set("localNewsLocation", e.target.value)} placeholder="City, region, or prefecture" />
+              <p className="hint" style={{ marginTop: 6 }}>Used for both local research and current weather.</p>
+            </div>
+            <div className="field" style={{ marginTop: 14 }}>
+              <label className="eyebrow">Preferred sources</label>
+              <textarea className="input" rows={3} value={s.localNewsSources}
+                onChange={(e) => set("localNewsSources", e.target.value)}
+                placeholder="Local newsrooms, government notices, weather and transport services" />
+            </div>
+            <div className="field" style={{ marginTop: 14 }}>
+              <label className="eyebrow">Editorial focus and exclusions</label>
+              <textarea className="input" rows={4} value={s.localNewsFocus}
+                onChange={(e) => set("localNewsFocus", e.target.value)}
+                placeholder="What should this edition prioritize or leave out?" />
+            </div>
+            <div className="field" style={{ marginTop: 14 }}>
+              <label className="eyebrow">Markdown archive folder</label>
+              <input className="input" value={s.localNewsArchiveFolder}
+                onChange={(e) => set("localNewsArchiveFolder", e.target.value)} placeholder="02-Library/Local News" />
+              <p className="hint" style={{ marginTop: 6 }}>A path inside the connected vault. Absolute paths and parent traversal are rejected.</p>
+            </div>
+          </>
+        )}
+      </section>
+
+      <section className="settings-section">
         <h3>Pomodoro</h3>
         <div style={{ display: "flex", gap: 14 }}>
           <div className="field" style={{ flex: 1 }}>

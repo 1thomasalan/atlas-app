@@ -30,6 +30,7 @@ export default function Sidebar(props: {
   vaultName: string;
   onChangeVault: () => void;
   briefName: string | null;
+  localNewsName: string | null;
 }) {
   const { route } = props;
   const is = (k: Route["kind"]) => route.kind === k;
@@ -88,7 +89,7 @@ export default function Sidebar(props: {
           <span className="rail-glyph"><Icon name="bluf" size={18} /></span> {props.briefName ?? "Daily Brief"}
         </button>
         <button className={`rail-btn ${is("local") ? "active" : ""}`} onClick={() => props.onNavigate({ kind: "local" })}>
-          <span className="rail-glyph"><Icon name="local" size={18} /></span> Local News
+          <span className="rail-glyph"><Icon name="local" size={18} /></span> {props.localNewsName ?? "Local News"}
         </button>
         <button className={`rail-btn ${is("pomodoro") ? "active" : ""}`} onClick={() => props.onNavigate({ kind: "pomodoro" })}>
           <span className="rail-glyph"><Icon name="pomodoro" size={18} /></span> Pomodoro

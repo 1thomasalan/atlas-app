@@ -10,6 +10,7 @@ import { HabitDef, DayLog, habitDefs, readDayLog, setHabit } from "../lib/habits
 import { Reading, readReadings } from "../lib/metrics";
 import { NewsSnapshot, newsSnapshot } from "../lib/news";
 import { loadBrief } from "../lib/dailybrief";
+import { LocalNewsEdition, loadLocalNews } from "../lib/localnews";
 import { Weather } from "../lib/weather";
 import { coverSrc, hostOf } from "../lib/unfurl";
 import { aiDailyBriefing } from "../lib/assist";
@@ -42,6 +43,7 @@ export default function Dashboard(props: {
   onProcessInbox: () => void;
   onRefreshObject: (path: string) => void;
   toast: (m: string) => void;
+  localNewsVersion: number;
 }) {
   const { profile, index } = props;
   const go = props.onNavigate;
@@ -56,6 +58,7 @@ export default function Dashboard(props: {
   const [news, setNews] = useState<NewsSnapshot>({ brief: null, local: null, weather: null });
   const [briefSnap, setBriefSnap] = useState<{ title: string; date: string } | null>(null);
   const [briefWeather, setBriefWeather] = useState<Weather | null>(null);
+  const [localEdition, setLocalEdition] = useState<LocalNewsEdition | null>(null);
   const [briefing, setBriefing] = useState("");
   const [briefingBusy, setBriefingBusy] = useState(false);
 
@@ -73,11 +76,12 @@ export default function Dashboard(props: {
     setWeight(await readReadings(profile, "weight"));
     setBp(await readReadings(profile, "bp"));
     setNews(await newsSnapshot(profile));
+    setLocalEdition(await loadLocalNews(profile));
     const b = await loadBrief(profile);
     const lead = b ? (b.local?.items[0] ?? b.sections[0]?.items[0]) : undefined;
     setBriefSnap(b && lead ? { title: lead.title, date: b.date } : null);
     setBriefWeather(b?.weather ?? null);
-  }, [profile, today]);
+  }, [profile, today, props.localNewsVersion]);
 
   useEffect(() => { refresh(); }, [refresh]);
 
@@ -136,6 +140,7 @@ export default function Dashboard(props: {
   const lastWeight = weight[weight.length - 1];
   const prevWeight = weight[weight.length - 2];
   const lastBp = bp[bp.length - 1];
+  const dashboardWeather = briefWeather ?? localEdition?.weather ?? null;
 
   const latestLink = useMemo(() => {
     const links = objectsOfType(index, "weblink")
@@ -298,11 +303,17 @@ export default function Dashboard(props: {
           </button>
           <button className="dash-tile" onClick={() => go({ kind: "local" })}>
             <span className="dash-tile-head">
-              <span className="eyebrow">Local news</span>
+              <span className="eyebrow">{props.settings.localNewsName.trim() || "Local news"}</span>
               <span className="dash-tile-go">→</span>
             </span>
-            <span className="dash-headline">{news.local?.title ?? "No local edition yet."}</span>
-            {news.local?.date && <span className="dash-tile-meta">{news.local.date}</span>}
+            <span className="dash-headline">
+              {localEdition?.headline ?? news.local?.title ?? "No local edition yet."}
+            </span>
+            {(localEdition?.date ?? news.local?.date) && (
+              <span className="dash-tile-meta">
+                {localEdition ? `${localEdition.date} · ${localEdition.edition}` : news.local?.date}
+              </span>
+            )}
           </button>
           <button className="dash-tile" onClick={() => go({ kind: "brief" })}>
             <span className="dash-tile-head">
@@ -310,12 +321,12 @@ export default function Dashboard(props: {
               <span className="dash-tile-go">→</span>
             </span>
             <span className="dash-weather-wrap">
-              {briefWeather
+              {dashboardWeather
                 ? <>
-                    <span className="dash-weather-emoji">{briefWeather.current.emoji}</span>
+                    <span className="dash-weather-emoji">{dashboardWeather.current.emoji}</span>
                     <span className="dash-weather">
-                      {briefWeather.current.tempC}°C / {briefWeather.current.tempF}°F · {briefWeather.current.label}
-                      {" · "}H {briefWeather.today.hiC}° L {briefWeather.today.loC}° · {briefWeather.location}
+                      {dashboardWeather.current.tempC}°C / {dashboardWeather.current.tempF}°F · {dashboardWeather.current.label}
+                      {" · "}H {dashboardWeather.today.hiC}° L {dashboardWeather.today.loC}° · {dashboardWeather.location}
                     </span>
                   </>
                 : <>

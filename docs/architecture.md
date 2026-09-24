@@ -31,6 +31,12 @@ The vault remains the durable database. Objects are classified by frontmatter
 frontmatter type, and property schema. Custom definitions live at
 `.atlas/types.json` in the user's vault so they remain portable with the notes.
 
+Daily Brief and Local News caches also live under `.atlas/`. Local News keeps
+its current structured edition at `.atlas/local-news/current.json` and a
+human-readable Markdown mirror in the vault folder selected in Settings. The
+React view only renders that contract; native generation and optional external
+agents are producers of the same format.
+
 The complete Atlas workflow uses:
 
 ```text

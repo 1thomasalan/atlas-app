@@ -36,6 +36,29 @@ export function seedDemo() {
     `---\ntype: daily-brief\nstatus: captured\n---\n\n# Daily Technology Brief - ${today}\n\n## AI\n- **Open tools make local workflows easier to own**\n  New releases improve long-running coding and research workflows.\n  *Why it matters:* Useful automation can stay close to the files it serves.\n\n- **Local-first apps have a moment**\n  Markdown vaults and portable data formats are receiving renewed attention.\n  *Why it matters:* Your files can outlive a subscription.\n`);
   put(`${r}/01-Inbox/01-Capture/River City Local News Edition - ${today}.md`,
     `---\ntype: local-news\nstatus: captured\n---\n\n# River City Local News Edition - ${today}\n\nSaturday · Local Time\n\n## Lead\n\n### Library opens a new neighborhood workshop\n\nThe fictional River City library added reservable tools and evening classes for residents.\n\n## Weather\n\nClouds in the morning with clearing expected after lunch.\n\n- Central district: cloudy, then brighter\n- Forecast marker: 18 C\n\n## Local Briefs\n\n### Weekend market expands its maker section\n\nMore tables are being reserved for local crafts and repair demonstrations.\n`);
+  put(`${r}/.atlas/local-news/current.json`, JSON.stringify({
+    schemaVersion: 1,
+    date: today,
+    edition: "morning",
+    name: "River City Dispatch",
+    location: "River City",
+    generatedAt: new Date().toISOString(),
+    headline: "Library workshop puts useful tools within reach",
+    dek: "A practical morning edition on neighborhood services, transit, and the weekend ahead. Every item opens its original source.",
+    weather: {
+      location: "River City",
+      current: { tempC: 18, tempF: 64, feelsC: 18, feelsF: 64, humidity: 62, windKph: 8, label: "Partly cloudy", emoji: "Clouds" },
+      today: { hiC: 23, loC: 15, hiF: 73, loF: 59, label: "Mostly clear", emoji: "Sun", precipPct: 20 },
+    },
+    sections: [
+      { title: "Civic", items: [{ section: "Civic", title: "Library opens a neighborhood workshop", summary: "Residents can now reserve tools and join evening repair classes at the central branch.", source: "River City Library", url: "https://example.com/library-workshop", date: today, image: "https://images.unsplash.com/photo-1521587760476-6c12a4b040da?w=900" }] },
+      { title: "Weather & Transport", items: [{ section: "Weather & Transport", title: "Weekend bus service adds market stops", summary: "Two temporary stops will shorten the walk to the expanded makers market on Saturday.", source: "River City Transit", url: "https://example.com/market-transit", date: today, image: "https://images.unsplash.com/photo-1494522358652-f30e61a60313?w=900" }] },
+      { title: "Culture & Community", items: [{ section: "Culture & Community", title: "Makers market expands its repair program", summary: "Local craftspeople will offer demonstrations and small-item repair consultations throughout the day.", source: "River City Market", url: "https://example.com/makers-market", date: today, image: "https://images.unsplash.com/photo-1488459716781-31db52582fe9?w=900" }] },
+    ],
+    events: [{ section: "Calendar", title: "Community photo walk", summary: "A guided documentary photo walk starts at the old station Saturday morning.", source: "River City Arts", url: "https://example.com/photo-walk", date: today, time: "09:00" }],
+    notes: [],
+    markdownPath: `${r}/02-Library/Local News/river-city-dispatch-morning-${today}.md`,
+  }, null, 2));
   put(`${r}/01-Inbox/01-Capture/${today}.md`,
     `# Daily Capture — ${today}\n\n## Morning Review (08:10)\n\nTop three for today:\n1. Ship the object browser\n2. Walk the [[Eastbank Esplanade]]\n3. Call [[Jordan Lee]]\n\n## Habits\n- [x] Gratitude\n- [ ] Journal\n- [x] Meditate — 15m\n- [ ] Exercise\n- [x] Morning Walk\n- [ ] Afternoon Walk\n`);
   for (let i = 1; i <= 6; i++) {

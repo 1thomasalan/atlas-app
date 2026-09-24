@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useMemo, useRef } from "react";
-import { Settings, loadSettings, saveSettings, applyAppearance, DEFAULTS } from "./lib/settings";
+import { Settings, loadSettings, loadSettingsSecrets, saveSettings, applyAppearance, DEFAULTS } from "./lib/settings";
 import { setChatModel } from "./lib/aiModel";
 import { nextTheme } from "./lib/themes";
 import { AtlasProfile, detectProfile } from "./lib/atlasProfile";
@@ -10,6 +10,7 @@ import { ObjectIndex, AtlasObject, buildIndex, createObject, loadObject, replace
 import { searchPhoto, savePhotoFromUrl, attachmentsFor } from "./lib/photos";
 import { generateCover } from "./lib/imagegen";
 import { generateDailyBrief, hasBriefToday } from "./lib/dailybrief";
+import { generateLocalNews } from "./lib/localnews";
 import { unfurlIntoObject, writeDigest, fetchPageText, looksLikeUrl, hostOf } from "./lib/unfurl";
 import { youtubeId, fetchYouTubeTranscript } from "./lib/youtube";
 import { aiVideoDigest, aiPageDigest } from "./lib/assist";
@@ -26,8 +27,8 @@ import TypeBrowser from "./components/TypeBrowser";
 import ObjectPage from "./components/ObjectPage";
 import KanbanView from "./components/KanbanView";
 import PomodoroView from "./components/PomodoroView";
-import NewspaperView from "./components/NewspaperView";
 import DailyBriefView from "./components/DailyBriefView";
+import LocalNewsView from "./components/LocalNewsView";
 import SettingsView from "./components/SettingsView";
 import SearchModal from "./components/SearchModal";
 import NewObjectModal from "./components/NewObjectModal";
@@ -60,6 +61,9 @@ export default function App() {
   const [briefBusy, setBriefBusy] = useState(false);
   const [briefStatus, setBriefStatus] = useState("");
   const [briefVersion, setBriefVersion] = useState(0);
+  const [localNewsBusy, setLocalNewsBusy] = useState(false);
+  const [localNewsStatus, setLocalNewsStatus] = useState("");
+  const [localNewsVersion, setLocalNewsVersion] = useState(0);
   const [processing, setProcessing] = useState<null | { preferredProcessor?: Processor }>(null);
   const [agentSecretStatus, setAgentSecretStatus] = useState<AgentSecretStatus>({ configured: false });
 
@@ -93,6 +97,18 @@ export default function App() {
       setBooted(true);
     })();
   }, [loadVault]);
+
+  // Let the first frame paint before macOS Keychain can present an access
+  // prompt for a newly signed local build.
+  useEffect(() => {
+    if (!booted) return;
+    const timer = window.setTimeout(() => {
+      loadSettingsSecrets()
+        .then((secrets) => setSettings((current) => ({ ...current, ...secrets })))
+        .catch((error) => console.warn("Atlas could not load secure credentials:", error));
+    }, 350);
+    return () => window.clearTimeout(timer);
+  }, [booted]);
 
   const refreshIndex = useCallback(async () => {
     if (profile && types.length) setIndex(await buildIndex(profile, types));
@@ -190,6 +206,26 @@ export default function App() {
       setBriefStatus("");
     }
   }, [profile, settings, briefBusy, showToast]);
+
+  // ---- Local News: explicit refresh, source-linked cache, and Markdown archive ----
+  const runLocalNews = useCallback(async () => {
+    if (!profile || localNewsBusy) return;
+    if (!settings.localNews) { showToast("Turn on Local News in Settings first"); return; }
+    if (!settings.openaiKey.trim()) { showToast("Add your OpenAI key in Settings for Local News"); return; }
+    setLocalNewsBusy(true);
+    setLocalNewsStatus("Starting local research...");
+    try {
+      const edition = await generateLocalNews(profile, settings, { onProgress: setLocalNewsStatus });
+      setLocalNewsVersion((version) => version + 1);
+      const count = edition.sections.reduce((sum, section) => sum + section.items.length, 0) + edition.events.length;
+      showToast(`${edition.name} ${edition.edition} edition is ready - ${count} items`);
+    } catch (err) {
+      showToast(`Local News failed: ${err instanceof Error ? err.message : "unknown"}`, 7000);
+    } finally {
+      setLocalNewsBusy(false);
+      setLocalNewsStatus("");
+    }
+  }, [profile, settings, localNewsBusy, showToast]);
 
   // Auto-fetch on the first open of the day (once per app session)
   const briefBooted = useRef(false);
@@ -468,6 +504,7 @@ export default function App() {
         vaultName={profile.root.split("/").pop() ?? "vault"}
         onChangeVault={chooseVault}
         briefName={settings.dailyBrief ? (settings.briefName.trim() || "Daily Brief") : null}
+        localNewsName={settings.localNews ? (settings.localNewsName.trim() || "Local News") : null}
       />
       <div className="main-col">
         <header className="topbar">
@@ -483,6 +520,7 @@ export default function App() {
             <Dashboard
               profile={profile} settings={settings} index={index} types={visibleTypes}
               onProcessInbox={() => openProcessing()}
+              localNewsVersion={localNewsVersion}
               onStartReview={setReview} onNavigate={push} onRefreshObject={refreshObject} toast={showToast}
             />
           )}
@@ -541,7 +579,13 @@ export default function App() {
               onRefresh={() => runDailyBrief(true)} onNavigate={push}
             />
           )}
-          {route.kind === "local" && <NewspaperView profile={profile} kind="local" />}
+          {route.kind === "local" && (
+            <LocalNewsView
+              profile={profile} settings={settings}
+              busy={localNewsBusy} status={localNewsStatus} version={localNewsVersion}
+              onRefresh={runLocalNews} onNavigate={push}
+            />
+          )}
           {route.kind === "pomodoro" && <PomodoroView profile={profile} settings={settings} toast={showToast} />}
           {route.kind === "settings" && (
             <SettingsView
@@ -643,6 +687,11 @@ export default function App() {
       {briefBusy && route.kind !== "brief" && (
         <button className="brief-pill" onClick={() => push({ kind: "brief" })} title="Open the Daily Brief">
           <span className="brief-dot" /> {briefStatus || "Fetching today's brief…"}
+        </button>
+      )}
+      {localNewsBusy && route.kind !== "local" && (
+        <button className="brief-pill local-news-pill" onClick={() => push({ kind: "local" })} title="Open Local News">
+          <span className="brief-dot" /> {localNewsStatus || "Refreshing local news..."}
         </button>
       )}
     </div>

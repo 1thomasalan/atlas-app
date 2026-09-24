@@ -16,6 +16,8 @@ captures, credentials, and settings stay outside it.
 - Lets users enable or disable built-in and custom object types in Settings.
 - Provides calendar, search, backlinks, typed properties, task lanes, daily
   reviews, habits, local briefs, health imports, and a Markdown editor.
+- Generates an on-demand, source-linked Local News edition with independent
+  location, source, editorial-focus, and vault archive settings.
 - Stores custom object schemas in the connected vault at `.atlas/types.json`.
 - Uses Object Studio to turn a plain-language object idea into a Capture
   request and a review-gated setup proposal.
@@ -49,6 +51,15 @@ External publishing, spending, messaging, account changes, and durable
 processing-rule changes remain approval-gated. See
 [`docs/agent-access.md`](docs/agent-access.md) and
 [`docs/security.md`](docs/security.md).
+
+## Local News
+
+Local News is independent of the Daily Brief. A refresh researches the user's
+configured coverage area, saves a structured current-edition cache under
+`.atlas/local-news/`, and archives a readable Markdown edition in a
+user-selected vault folder. Rendering is deterministic; scheduled agents can
+write the same cache contract without changing the UI. See
+[`docs/local-news.md`](docs/local-news.md).
 
 ## Development
 

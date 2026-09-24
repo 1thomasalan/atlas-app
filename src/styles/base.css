@@ -369,6 +369,7 @@ a { color: inherit; }
 }
 .paper-btn:hover:not(:disabled) { background: var(--paper-rule-strong); color: var(--paper-bg); }
 .paper-btn:disabled { opacity: 0.45; cursor: default; }
+.paper-btn-secondary { border-color: var(--paper-rule); color: var(--paper-ink-2); }
 
 /* Masthead — giant centered serif under a classic double rule */
 .paper-masthead {
@@ -1682,6 +1683,18 @@ body { background-color: var(--bg); background-image: var(--grad-canvas); backgr
   font-family: var(--paper-serif); text-align: center; margin: 24px auto 26px; max-width: 72ch;
   font-size: clamp(20px, 2.3vw, 29px); line-height: 1.4; color: var(--paper-ink);
   padding-bottom: 26px; border-bottom: 1px solid var(--paper-rule-strong);
+}
+.local-news-headline {
+  max-width: 900px; margin: 30px auto 8px; text-align: center;
+  font-family: var(--paper-serif); font-size: 42px;
+  line-height: 1.02; color: var(--paper-ink); letter-spacing: 0;
+}
+.local-news-dek { margin-top: 10px; font-size: 20px; }
+.local-events { padding-top: 4px; }
+.local-news-pill { bottom: 68px; }
+@media (max-width: 680px) {
+  .local-news-headline { font-size: 30px; }
+  .local-news-dek { font-size: 17px; }
 }
 
 /* Sections — each topic (and Local) is a titled block of uniform story cards,

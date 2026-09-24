@@ -25,6 +25,13 @@ export interface Settings {
   briefName: string;      // masthead the user picks (e.g. "Morning Brief")
   briefTopics: string;    // free text, e.g. "AI, Robotics, Biotech"
   briefLocation: string;  // city for local weather + local news (e.g. "Portland, Oregon")
+  // ---- Local News: a dedicated, source-linked local newspaper ----
+  localNews: boolean;
+  localNewsName: string;
+  localNewsLocation: string;
+  localNewsSources: string;
+  localNewsFocus: string;
+  localNewsArchiveFolder: string; // vault-relative Markdown archive
   processingMode: ProcessingMode;
   codexEnabled: boolean;
   agentZeroEnabled: boolean;
@@ -52,6 +59,12 @@ export const DEFAULTS: Settings = {
   briefName: "Daily Brief",
   briefTopics: "",
   briefLocation: "",
+  localNews: false,
+  localNewsName: "Local News",
+  localNewsLocation: "",
+  localNewsSources: "Local government notices, weather services, transport operators, and reputable local newsrooms",
+  localNewsFocus: "Practical civic news, weather, transport, culture, economy, education, and grounded community stories",
+  localNewsArchiveFolder: "02-Library/Local News",
   processingMode: "codex",
   codexEnabled: true,
   agentZeroEnabled: false,
@@ -73,6 +86,7 @@ export function applyAppearance(s: Settings): void {
 
 let store: Store | null = null;
 let secureCache: AppSecrets | null = null;
+let secureLoaded = false;
 
 async function getStore(): Promise<Store> {
   if (!store) store = await load("atlas-settings.json", { autoSave: true, defaults: {} });
@@ -81,22 +95,19 @@ async function getStore(): Promise<Store> {
 
 export async function loadSettings(): Promise<Settings> {
   let saved: Partial<Settings> = {};
-  let secure = { openaiKey: "", todoistToken: "" };
   if (!inTauri) {
     seedDemo();
     saved = demoStore.get<Partial<Settings>>("settings") ?? {};
-    secure = await loadAppSecrets();
   } else {
-    // Migration runs before plugin-store reads the file so its in-memory copy
-    // can never write legacy plaintext credentials back to disk.
-    secure = await loadAppSecrets();
     const s = await getStore();
     saved = (await s.get<Partial<Settings>>("settings")) ?? {};
   }
-  secureCache = { ...secure };
   const merged = { ...DEFAULTS, ...saved };
-  merged.openaiKey = secure.openaiKey;
-  merged.todoistToken = secure.todoistToken;
+  // Keychain access can show an OS authorization prompt after a locally built
+  // app is replaced. Boot the interface first instead of leaving a blank
+  // window while macOS waits for that prompt.
+  merged.openaiKey = "";
+  merged.todoistToken = "";
   merged.theme = normTheme(merged.theme as unknown as string);   // migrate legacy light/dark
   if (!["codex", "agent-zero", "hybrid"].includes(merged.processingMode)) {
     merged.processingMode = "codex";
@@ -105,15 +116,28 @@ export async function loadSettings(): Promise<Settings> {
   return merged;
 }
 
+/** Load secrets after the first frame. The native command also performs the
+ *  one-time plaintext-to-Keychain migration before returning. */
+export async function loadSettingsSecrets(): Promise<AppSecrets> {
+  const secure = await loadAppSecrets();
+  secureCache = { ...secure };
+  secureLoaded = true;
+  return secure;
+}
+
 export async function saveSettings(settings: Settings): Promise<void> {
   const nextSecrets = {
     openaiKey: settings.openaiKey,
     todoistToken: settings.todoistToken,
   };
-  if (!secureCache ||
+  // Do not erase existing Keychain values if the settings screen autosaves
+  // while an OS authorization prompt is still pending.
+  if ((!secureLoaded && (nextSecrets.openaiKey || nextSecrets.todoistToken)) ||
+      (secureLoaded && (!secureCache ||
       secureCache.openaiKey !== nextSecrets.openaiKey ||
-      secureCache.todoistToken !== nextSecrets.todoistToken) {
+      secureCache.todoistToken !== nextSecrets.todoistToken))) {
     secureCache = await saveAppSecrets(nextSecrets);
+    secureLoaded = true;
   }
   const persisted: Partial<Settings> = { ...settings };
   delete persisted.openaiKey;
