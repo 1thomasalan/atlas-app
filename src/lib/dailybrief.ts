@@ -79,10 +79,19 @@ async function mapPool<T, R>(items: T[], limit: number, fn: (item: T) => Promise
 /** Resolve a photo for a story: the article's own image first, else a generated
  *  illustration (AI in the app within budget, a procedural cover otherwise),
  *  always labeled by its actual origin so it cannot be mistaken for source photography. */
-async function resolvePhoto(profile: AtlasProfile, settings: Settings, story: BriefStory, budget: StoryImageBudget): Promise<Pick<BriefItem, "image" | "imageAi" | "imageGenerated">> {
+async function resolvePhoto(
+  profile: AtlasProfile,
+  settings: Settings,
+  story: BriefStory,
+  budget: StoryImageBudget,
+  seenImages: Set<string>,
+): Promise<Pick<BriefItem, "image" | "imageAi" | "imageGenerated">> {
   try {
     const u = await unfurl(story.url);
-    if (u.image && /^https?:\/\//.test(u.image)) return { image: u.image, imageAi: false, imageGenerated: false };
+    if (u.image && /^https?:\/\//.test(u.image) && !seenImages.has(u.image)) {
+      seenImages.add(u.image);
+      return { image: u.image, imageAi: false, imageGenerated: false };
+    }
   } catch { /* no source image — fall through to a generated one */ }
   let gen: GenImage | null = null;
   let imageAi = false;
@@ -106,8 +115,12 @@ export async function addStoryImages<T extends BriefStory>(
   settings: Settings,
   stories: T[],
   budget: StoryImageBudget,
+  seenImages = new Set<string>(),
 ): Promise<(T & Pick<BriefItem, "image" | "imageAi" | "imageGenerated">)[]> {
-  return mapPool(stories, 3, async (s) => ({ ...s, ...(await resolvePhoto(profile, settings, s, budget)) }));
+  return mapPool(stories, 3, async (s) => ({
+    ...s,
+    ...(await resolvePhoto(profile, settings, s, budget, seenImages)),
+  }));
 }
 
 /** Generate today's brief from the user's settings and cache it. Network-heavy
@@ -119,6 +132,7 @@ export async function generateDailyBrief(
   const key = settings.openaiKey.trim();
   const topics = parseTopics(settings.briefTopics);
   const notes: string[] = [];
+  const seenImages = new Set<string>();
 
   opts.onProgress?.("Checking local weather…");
   const weather = settings.briefLocation.trim()
@@ -137,11 +151,11 @@ export async function generateDailyBrief(
   const imageCount = localStories.length + topicResults.reduce((sum, result) => sum + result.s.length, 0);
   const budget: StoryImageBudget = { ai: imageCount };
   const local: BriefSection | null = localStories.length
-    ? { title: `Local — ${settings.briefLocation.trim()}`, items: await addStoryImages(profile, settings, localStories, budget) }
+    ? { title: `Local — ${settings.briefLocation.trim()}`, items: await addStoryImages(profile, settings, localStories, budget, seenImages) }
     : null;
   const sections: BriefSection[] = [];
   for (const { t, s } of topicResults) {
-    if (s.length) sections.push({ title: t, items: await addStoryImages(profile, settings, s, budget) });
+    if (s.length) sections.push({ title: t, items: await addStoryImages(profile, settings, s, budget, seenImages) });
   }
 
   if (!local && !sections.length && !weather) {

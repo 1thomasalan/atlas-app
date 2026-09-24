@@ -183,7 +183,7 @@ function WeatherMetric({ label, value, detail }: { label: string; value: string;
   );
 }
 
-export function NewsCard({ item, root }: { item: BriefItem; root: string }) {
+export function NewsCard({ item, root, category }: { item: BriefItem; root: string; category?: string }) {
   const src = coverSrc(root, item.image);
   const open = (e: MouseEvent) => { e.preventDefault(); openExternal(item.url); };
   return (
@@ -196,6 +196,7 @@ export function NewsCard({ item, root }: { item: BriefItem; root: string }) {
           {!item.imageAi && item.imageGenerated && <span className="ai-badge">Generated artwork</span>}
         </a>
       )}
+      {category && <span className="news-card-category">{category}</span>}
       <h3 className="news-card-title"><a href={item.url} onClick={open}>{item.title}</a></h3>
       {item.summary && <p className="news-card-why"><em>Why it matters:</em> {item.summary}</p>}
       {(item.venue || item.photoOpportunity || item.logistics) && (

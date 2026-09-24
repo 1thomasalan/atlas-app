@@ -1777,8 +1777,21 @@ body { background-color: var(--bg); background-image: var(--grad-canvas); backgr
 }
 .news-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 26px 34px; }
 .news-card { display: flex; flex-direction: column; }
+.news-roundup { margin-top: 38px; padding-top: 18px; border-top: 1px solid var(--paper-rule-strong); }
+.news-roundup-head { display: flex; align-items: baseline; justify-content: space-between; gap: 20px; margin-bottom: 18px; }
+.news-roundup-head .news-section-head { flex: 0 0 auto; margin: 0; padding: 0; border: 0; }
+.news-roundup-head > span {
+  min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--paper-faint);
+}
+.news-cards-roundup { grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap: 30px 26px; }
+.news-cards-roundup .news-card { min-width: 0; padding-bottom: 16px; border-bottom: 1px solid var(--paper-rule); }
 .news-card-media { display: block; position: relative; margin-bottom: 10px; aspect-ratio: 16 / 10; background: var(--paper-rule); overflow: hidden; }
 .news-card-media img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.news-card-category {
+  display: block; margin: 1px 0 7px; font-family: var(--font-mono); font-size: 9px;
+  font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--paper-accent);
+}
 .news-card-title { margin: 0 0 8px; font-family: var(--paper-serif); font-weight: 800; line-height: 1.18; letter-spacing: -0.01em; font-size: 19px; }
 .news-card-title a { color: var(--paper-ink); text-decoration: none; }
 .news-card-title a:hover { text-decoration: underline; text-decoration-color: var(--paper-accent); }
@@ -1793,6 +1806,32 @@ body { background-color: var(--bg); background-image: var(--grad-canvas); backgr
 .news-card-photo-angle { padding-left: 8px; border-left: 3px solid var(--paper-accent); }
 .news-card-src { margin-top: auto; font-family: var(--font-mono); font-size: 11px; color: var(--paper-faint); text-decoration: none; cursor: pointer; }
 .news-card-src:hover { color: var(--paper-accent); }
+
+@container (min-width: 680px) {
+  .news-roundup-solo .news-card {
+    display: grid; grid-template-columns: minmax(240px, 0.9fr) minmax(0, 1.1fr);
+    grid-template-rows: auto auto 1fr auto; column-gap: 28px; align-items: start;
+  }
+  .news-roundup-solo .news-card-media { grid-column: 1; grid-row: 1 / 6; margin: 0; }
+  .news-roundup-solo .news-card > :not(.news-card-media) { grid-column: 2; }
+}
+
+@container (min-width: 460px) and (max-width: 720px) {
+  .news-cards-roundup > .news-card:last-child:nth-child(odd) {
+    grid-column: 1 / -1; display: grid;
+    grid-template-columns: minmax(210px, 0.9fr) minmax(0, 1.1fr);
+    grid-template-rows: auto auto 1fr auto; column-gap: 24px; align-items: start;
+  }
+  .news-cards-roundup > .news-card:last-child:nth-child(odd) .news-card-media {
+    grid-column: 1; grid-row: 1 / 6; margin: 0;
+  }
+  .news-cards-roundup > .news-card:last-child:nth-child(odd) > :not(.news-card-media) { grid-column: 2; }
+}
+
+@container (max-width: 560px) {
+  .news-roundup-head { align-items: flex-start; flex-direction: column; gap: 6px; }
+  .news-roundup-head > span { white-space: normal; line-height: 1.45; }
+}
 
 .ai-badge {
   position: absolute; right: 7px; bottom: 7px; padding: 2px 7px;
@@ -1835,6 +1874,12 @@ body { background-color: var(--bg); background-image: var(--grad-canvas); backgr
   .news-section { break-before: auto; }
   .news-section-head { break-after: avoid; font-size: 18px; }
   .news-cards { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px 20px; }
+  .news-roundup { margin-top: 22px; padding-top: 12px; }
+  .news-roundup-head { margin-bottom: 12px; }
+  .news-roundup-solo .news-card { display: flex; }
+  .news-roundup-solo .news-card-media { margin-bottom: 10px; }
+  .news-cards-roundup > .news-card:last-child:nth-child(odd) { display: flex; grid-column: auto; }
+  .news-cards-roundup > .news-card:last-child:nth-child(odd) .news-card-media { margin-bottom: 10px; }
   .news-card { break-inside: avoid; }
   .news-card-title { font-size: 15px; }
   .news-card-why { font-size: 11px; line-height: 1.4; }

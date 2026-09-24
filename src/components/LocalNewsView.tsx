@@ -50,6 +50,10 @@ export default function LocalNewsView(props: {
   const dateLabel = new Date(`${date}T00:00:00`).toLocaleDateString(undefined, {
     weekday: "long", year: "numeric", month: "long", day: "numeric",
   });
+  const fullSections = edition?.sections.filter((section) => section.items.length > 1) ?? [];
+  const singletonStories = edition?.sections
+    .filter((section) => section.items.length === 1)
+    .map((section) => section.items[0]) ?? [];
   const toSettings = () => props.onNavigate({ kind: "settings" });
 
   return (
@@ -116,7 +120,7 @@ export default function LocalNewsView(props: {
             <h2 className="local-news-headline">{edition.headline}</h2>
             {edition.dek && <p className="news-lead local-news-dek">{edition.dek}</p>}
 
-            {edition.sections.map((section) => (
+            {fullSections.map((section) => (
               <section key={section.title} className="news-section">
                 <h2 className="news-section-head">{section.title}</h2>
                 <div className="news-cards">
@@ -126,6 +130,20 @@ export default function LocalNewsView(props: {
                 </div>
               </section>
             ))}
+
+            {singletonStories.length > 0 && (
+              <section className={`news-section news-roundup ${singletonStories.length === 1 ? "news-roundup-solo" : ""}`}>
+                <div className="news-roundup-head">
+                  <h2 className="news-section-head">Around Okinawa</h2>
+                  <span>{singletonStories.map((item) => item.section).join(" / ")}</span>
+                </div>
+                <div className="news-cards news-cards-roundup">
+                  {singletonStories.map((item, index) => (
+                    <NewsCard key={`${item.url}-${index}`} item={item} root={props.profile.root} category={item.section} />
+                  ))}
+                </div>
+              </section>
+            )}
 
             {edition.events.length > 0 && (
               <section className="news-section local-events">

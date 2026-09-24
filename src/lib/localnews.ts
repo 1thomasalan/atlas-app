@@ -250,9 +250,10 @@ export async function generateLocalNews(
 
   opts.onProgress?.("Finding source photos and creating missing artwork...");
   const imageBudget: StoryImageBudget = { ai: stories.length + events.length };
+  const seenImages = new Set<string>();
   const [picturedStories, picturedEvents] = await Promise.all([
-    addStoryImages(profile, settings, stories, imageBudget),
-    addStoryImages(profile, settings, events, imageBudget),
+    addStoryImages(profile, settings, stories, imageBudget, seenImages),
+    addStoryImages(profile, settings, events, imageBudget, seenImages),
   ]);
   notes.push(...(raw.verificationNotes ?? []).map(String).map((note) => note.trim()).filter(Boolean));
 

@@ -87,6 +87,9 @@ editorial narration.
 - Never invent a source URL, date, time, or unstable fact.
 - Include 2-3 verified festivals or documentary photo opportunities in the
   next 45 days when available, with date, venue, story angle, and logistics.
+- Avoid repeating the same generic source image across several stories. Keep
+  the first verified source image and use clearly labeled generated artwork
+  for later duplicates so the edition remains visually distinct.
 - Omit unverifiable items or record a material gap in `notes`.
 - Write the Markdown archive before replacing `current.json`.
 - Keep credentials outside the vault and repository.
