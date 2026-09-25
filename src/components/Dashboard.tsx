@@ -173,6 +173,54 @@ export default function Dashboard(props: {
         {taskEnabled && <Stat label="Waiting" num={active.filter((t) => t.lane === "waiting").length} onClick={() => go({ kind: "type", typeKey: "task" })} />}
       </div>
 
+      {/* ---- The wire ---- */}
+      <div className="dash-row dash-row-3">
+        <button className="dash-tile" onClick={() => go({ kind: "brief" })}>
+          <span className="dash-tile-head">
+            <span className="eyebrow" style={{ color: "var(--signal)" }}>
+              {props.settings.briefName.trim() || "Daily Brief"}
+            </span>
+            <span className="dash-tile-go">→</span>
+          </span>
+          <span className="dash-headline">{briefSnap?.title ?? "No brief yet — open to fetch today's."}</span>
+          {briefSnap?.date && <span className="dash-tile-meta">{briefSnap.date}</span>}
+        </button>
+        <button className="dash-tile" onClick={() => go({ kind: "local" })}>
+          <span className="dash-tile-head">
+            <span className="eyebrow">{props.settings.localNewsName.trim() || "Local news"}</span>
+            <span className="dash-tile-go">→</span>
+          </span>
+          <span className="dash-headline">
+            {localEdition?.headline ?? news.local?.title ?? "No local edition yet."}
+          </span>
+          {(localEdition?.date ?? news.local?.date) && (
+            <span className="dash-tile-meta">
+              {localEdition ? `${localEdition.date} · ${localEdition.edition}` : news.local?.date}
+            </span>
+          )}
+        </button>
+        <button className="dash-tile" onClick={() => go({ kind: "brief" })}>
+          <span className="dash-tile-head">
+            <span className="eyebrow">Weather</span>
+            <span className="dash-tile-go">→</span>
+          </span>
+          <span className="dash-weather-wrap">
+            {dashboardWeather
+              ? <>
+                  <span className="dash-weather-emoji">{dashboardWeather.current.emoji}</span>
+                  <span className="dash-weather">
+                    {dashboardWeather.current.tempC}°C / {dashboardWeather.current.tempF}°F · {dashboardWeather.current.label}
+                    {" · "}H {dashboardWeather.today.hiC}° L {dashboardWeather.today.loC}° · {dashboardWeather.location}
+                  </span>
+                </>
+              : <>
+                  {weatherKindOf(news.weather) && <WeatherGlyph kind={weatherKindOf(news.weather)!} />}
+                  <span className="dash-weather">{news.weather ?? "No weather yet — open the Daily Brief to fetch today's."}</span>
+                </>}
+          </span>
+        </button>
+      </div>
+
       <div className="dash-rhythm">
         <span className="eyebrow">Daily rhythm</span>
         {(["morning", "midday", "evening"] as ReviewKind[]).map((k) => (
@@ -288,54 +336,6 @@ export default function Dashboard(props: {
             </span>
           </button>
         </div>}
-
-        {/* ---- The wire ---- */}
-        <div className="dash-row dash-row-3">
-          <button className="dash-tile" onClick={() => go({ kind: "brief" })}>
-            <span className="dash-tile-head">
-              <span className="eyebrow" style={{ color: "var(--signal)" }}>
-                {props.settings.briefName.trim() || "Daily Brief"}
-              </span>
-              <span className="dash-tile-go">→</span>
-            </span>
-            <span className="dash-headline">{briefSnap?.title ?? "No brief yet — open to fetch today's."}</span>
-            {briefSnap?.date && <span className="dash-tile-meta">{briefSnap.date}</span>}
-          </button>
-          <button className="dash-tile" onClick={() => go({ kind: "local" })}>
-            <span className="dash-tile-head">
-              <span className="eyebrow">{props.settings.localNewsName.trim() || "Local news"}</span>
-              <span className="dash-tile-go">→</span>
-            </span>
-            <span className="dash-headline">
-              {localEdition?.headline ?? news.local?.title ?? "No local edition yet."}
-            </span>
-            {(localEdition?.date ?? news.local?.date) && (
-              <span className="dash-tile-meta">
-                {localEdition ? `${localEdition.date} · ${localEdition.edition}` : news.local?.date}
-              </span>
-            )}
-          </button>
-          <button className="dash-tile" onClick={() => go({ kind: "brief" })}>
-            <span className="dash-tile-head">
-              <span className="eyebrow">Weather</span>
-              <span className="dash-tile-go">→</span>
-            </span>
-            <span className="dash-weather-wrap">
-              {dashboardWeather
-                ? <>
-                    <span className="dash-weather-emoji">{dashboardWeather.current.emoji}</span>
-                    <span className="dash-weather">
-                      {dashboardWeather.current.tempC}°C / {dashboardWeather.current.tempF}°F · {dashboardWeather.current.label}
-                      {" · "}H {dashboardWeather.today.hiC}° L {dashboardWeather.today.loC}° · {dashboardWeather.location}
-                    </span>
-                  </>
-                : <>
-                    {weatherKindOf(news.weather) && <WeatherGlyph kind={weatherKindOf(news.weather)!} />}
-                    <span className="dash-weather">{news.weather ?? "No weather yet — open the Daily Brief to fetch today's."}</span>
-                  </>}
-            </span>
-          </button>
-        </div>
 
         {/* ---- Latest clip + the vault ---- */}
         <div className="dash-row dash-row-2">
