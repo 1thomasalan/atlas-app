@@ -199,7 +199,7 @@ export default function Dashboard(props: {
             </span>
           )}
         </button>
-        <button className="dash-tile" onClick={() => go({ kind: "brief" })}>
+        <button className="dash-tile" onClick={() => go({ kind: "local" })}>
           <span className="dash-tile-head">
             <span className="eyebrow">Weather</span>
             <span className="dash-tile-go">→</span>

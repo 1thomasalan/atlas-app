@@ -459,11 +459,11 @@ export default function App() {
       case "habits": return "Habits";
       case "object": return index.byPath.get(route.path)?.title ?? route.path.split("/").pop()!.replace(/\.md$/, "");
       case "brief": return settings.briefName.trim() || "Daily Brief";
-      case "local": return "Local News";
+      case "local": return settings.localNewsName.trim() || "Local News";
       case "pomodoro": return "Pomodoro";
       case "settings": return "Settings";
     }
-  }, [route, index, types, settings.briefName]);
+  }, [route, index, types, settings.briefName, settings.localNewsName]);
 
   if (!booted) return null;
 
